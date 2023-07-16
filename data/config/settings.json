@@ -1,0 +1,18 @@
+{
+
+	"missileMultiplier":3f,
+
+	"graphics":{
+		"icons":{
+			"damagetype_kinetic_desaturated": "graphics/icons/damagetype_kinetic_desaturated.png",
+			"damagetype_high_explosive_desaturated": "graphics/icons/damagetype_high_explosive_desaturated.png",
+			"damagetype_energy_desaturated": "graphics/icons/damagetype_energy_desaturated.png",
+			"damagetype_fragmentation_desaturated": "graphics/icons/damagetype_fragmentation_desaturated.png",
+			"energy_weapon_mastery_desaturated": "graphics/icons/energy_weapon_mastery_desaturated.png",
+			"ranged_specialization_desaturated": "graphics/icons/ranged_specialization_desaturated.png",
+			"icon_search_and_destroy_desaturated": "graphics/icons/icon_search_and_destroy_desaturated.png",
+			"icon_set_target_desaturated": "graphics/icons/icon_set_target_desaturated.png"
+		}
+	}
+}
+
