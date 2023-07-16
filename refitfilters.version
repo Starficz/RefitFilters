@@ -1,7 +1,7 @@
 {
     "masterVersionFile": "https://raw.githubusercontent.com/Starficz/RefitFilters/main/refitfilters.version",
     "modName": "Refit Filters",
-    "modThreadId": "20000",
+    #"modThreadId": "20000",
     "directDownloadURL": "https://github.com/Starficz/RefitFilters/releases/download/1.0.0/RefitFilters.zip",
     "changelogURL": "https://raw.githubusercontent.com/MagicLibStarsector/MagicLib/master/CHANGELOGS.md",
     "modVersion":
