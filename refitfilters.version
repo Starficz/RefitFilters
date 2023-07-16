@@ -1,9 +1,9 @@
 {
     "masterVersionFile": "https://raw.githubusercontent.com/Starficz/RefitFilters/main/refitfilters.version",
     "modName": "Refit Filters",
-    #"modThreadId": "?",
-    #"directDownloadURL": "https://github.com/MagicLibStarsector/MagicLib/releases/download/1.1.3-rc01/MagicLib-1.1.3-rc01.zip",
-    #"changelogURL": "https://raw.githubusercontent.com/MagicLibStarsector/MagicLib/master/CHANGELOGS.md",
+    "modThreadId": "20000",
+    "directDownloadURL": "https://github.com/Starficz/RefitFilters/releases/download/1.0.0/RefitFilters.zip",
+    "changelogURL": "https://raw.githubusercontent.com/MagicLibStarsector/MagicLib/master/CHANGELOGS.md",
     "modVersion":
         {
             "major": "1",
