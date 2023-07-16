@@ -74,7 +74,7 @@ public class MainGUI extends BaseHullMod {
 
     @Override
     public void advanceInCampaign(FleetMemberAPI member, float amount) {
-        member.getVariant().removeMod("FM_filterGUI");
+        member.getVariant().removeMod("RF_MainGUI");
     }
 
     @Override
@@ -248,25 +248,25 @@ public class MainGUI extends BaseHullMod {
     private static void processInputs(ShipAPI ship, WeaponWhitelist weaponWhitelist){
         if (weaponWhitelist == null) return;
 
-        if (Keyboard.isKeyDown(Keyboard.getKeyIndex("TAB"))) {
+        if (Keyboard.isKeyDown(58)) {
             weaponWhitelist.activeTab = (weaponWhitelist.activeTab + 1) % 3;
         }
-        if (Keyboard.isKeyDown(Keyboard.getKeyIndex("F1"))) {
+        if (Keyboard.isKeyDown(2)) {
             if(weaponWhitelist.activeTab == 0) {weaponWhitelist.firstRangeBracket = !weaponWhitelist.firstRangeBracket;}
             if(weaponWhitelist.activeTab == 1) {weaponWhitelist.kinetic = !weaponWhitelist.kinetic;}
             if(weaponWhitelist.activeTab == 2) {weaponWhitelist.beam = !weaponWhitelist.beam;}
         }
-        if (Keyboard.isKeyDown(Keyboard.getKeyIndex("F2"))) {
+        if (Keyboard.isKeyDown(3)) {
             if(weaponWhitelist.activeTab == 0) {weaponWhitelist.secondRangeBracket = !weaponWhitelist.secondRangeBracket;}
             if(weaponWhitelist.activeTab == 1) {weaponWhitelist.highExplosive = !weaponWhitelist.highExplosive;}
             if(weaponWhitelist.activeTab == 2) {weaponWhitelist.projectile = !weaponWhitelist.projectile;}
         }
-        if (Keyboard.isKeyDown(Keyboard.getKeyIndex("F3"))) {
+        if (Keyboard.isKeyDown(4)) {
             if(weaponWhitelist.activeTab == 0) {weaponWhitelist.thirdRangeBracket = !weaponWhitelist.thirdRangeBracket;}
             if(weaponWhitelist.activeTab == 1) {weaponWhitelist.energy = !weaponWhitelist.energy;}
             if(weaponWhitelist.activeTab == 2) {weaponWhitelist.pointDefense = !weaponWhitelist.pointDefense;}
         }
-        if (Keyboard.isKeyDown(Keyboard.getKeyIndex("F4"))) {
+        if (Keyboard.isKeyDown(5)) {
             if(weaponWhitelist.activeTab == 0) {weaponWhitelist.fourthRangeBracket = !weaponWhitelist.fourthRangeBracket;}
             if(weaponWhitelist.activeTab == 1) {weaponWhitelist.fragmentation = !weaponWhitelist.fragmentation;}
             if(weaponWhitelist.activeTab == 2) {weaponWhitelist.nonPointDefense = !weaponWhitelist.nonPointDefense;}
@@ -295,7 +295,7 @@ public class MainGUI extends BaseHullMod {
 
     private static void addTogglePara(TooltipMakerAPI parent, int key, int section, int activeSection){
         if (section == activeSection)
-            parent.addPara("(F" + key + ") Toggle", PAD, Misc.getGrayColor(), Misc.getHighlightColor(), "F"+key).setAlignment(Alignment.MID);
+            parent.addPara("(" + key + ") Toggle", PAD, Misc.getGrayColor(), Misc.getHighlightColor(), String.valueOf(key)).setAlignment(Alignment.MID);
     }
 
     public static class RefitFiltersCostListener implements WeaponOPCostModifier {
@@ -309,6 +309,7 @@ public class MainGUI extends BaseHullMod {
         boolean blacklisted = true;
 
         WeaponWhitelist weaponWhitelist = fleetIDWeaponWhitelist.get(currentFleetMemberID);
+        if(weaponWhitelist == null) return false;
 
         //weapon ranges TODO: maybe separate out missiles instead of multiplier
         float range = weapon.getMaxRange();
