@@ -1,9 +1,13 @@
 package org.starficz.refitfilters;
 
 import com.fs.starfarer.api.Global;
+import com.fs.starfarer.api.campaign.StarSystemAPI;
+import com.fs.starfarer.api.characters.MutableCharacterStatsAPI;
 import com.fs.starfarer.api.combat.*;
 import com.fs.starfarer.api.combat.listeners.WeaponOPCostModifier;
 import com.fs.starfarer.api.fleet.FleetMemberAPI;
+import com.fs.starfarer.api.impl.campaign.ids.Stats;
+import com.fs.starfarer.api.loading.WeaponGroupType;
 import com.fs.starfarer.api.loading.WeaponSlotAPI;
 import com.fs.starfarer.api.loading.WeaponSpecAPI;
 import com.fs.starfarer.api.ui.*;
@@ -11,6 +15,7 @@ import com.fs.starfarer.api.util.Misc;
 import org.lwjgl.input.Keyboard;
 
 import java.awt.*;
+import java.util.EnumSet;
 import java.util.HashMap;
 
 public class MainGUI extends BaseHullMod {
@@ -51,6 +56,8 @@ public class MainGUI extends BaseHullMod {
         public boolean nonPointDefense = true;
     };
 
+    FleetMemberAPI currentShip;
+
     @Override
     public void applyEffectsBeforeShipCreation(ShipAPI.HullSize hullSize, MutableShipStatsAPI stats, String id) {
         stats.removeListenerOfClass(RefitFiltersCostListener.class);
@@ -61,6 +68,7 @@ public class MainGUI extends BaseHullMod {
             fleetIDWeaponWhitelist.put(stats.getFleetMember().getId(), new WeaponWhitelist());
         }
         currentFleetMemberID = stats.getFleetMember().getId();
+        removeFilterExceptThisShip(stats.getFleetMember());
         updateOPAdjustment(stats.getVariant());
     }
 
@@ -69,12 +77,27 @@ public class MainGUI extends BaseHullMod {
         if (!ship.getVariant().hasHullMod("RF_OPAdjuster")) {
             ship.getVariant().addMod("RF_OPAdjuster");
         }
+        removeFilterExceptThisShip(ship.getFleetMember());
         updateOPAdjustment(ship.getVariant());
+    }
+
+    public void removeFilterExceptThisShip(FleetMemberAPI ship){
+        if (ship == null || ship.getFleetData() == null) return;
+        for(FleetMemberAPI fleetMember : ship.getFleetData().getMembersListCopy()){
+            if (fleetMember == ship) continue;
+
+            if (fleetMember.getVariant().hasHullMod("RF_MainGUI"))
+                fleetMember.getVariant().removeMod("RF_MainGUI");
+
+            if (fleetMember.getVariant().hasHullMod("RF_OPAdjuster"))
+                fleetMember.getVariant().removeMod("RF_OPAdjuster");
+        }
     }
 
     @Override
     public void advanceInCampaign(FleetMemberAPI member, float amount) {
-        member.getVariant().removeMod("RF_MainGUI");
+        if (amount > 0 && member.getVariant().hasHullMod("RF_MainGUI"))
+            member.getVariant().removeMod("RF_MainGUI");
     }
 
     @Override
@@ -123,7 +146,6 @@ public class MainGUI extends BaseHullMod {
         secondRangeSeparatorTT.getPosition().rightOfMid(firstRangeSeparatorTT, 0f);
         thirdRangeSeparatorTT.getPosition().rightOfMid(secondRangeSeparatorTT, 0f);
 
-
         Color rangeTickColor = new Color(175,125,0);
         Color rangeWhitelistColor = new Color(0,30,0);
         Color rangeBlacklistColor = new Color(30,0,0);
@@ -160,7 +182,6 @@ public class MainGUI extends BaseHullMod {
         fourthRangeBracketTT.getPosition().rightOfMid(thirdRangeBracketTT, 0f);
         // update the height to account for the y offset here
         tooltip.setHeightSoFar(tooltip.getHeightSoFar()+40f);
-
 
         // start second tab
         Color notSelectedColor = new Color(30,30,30);
@@ -290,7 +311,6 @@ public class MainGUI extends BaseHullMod {
         Global.getSettings().getHullModSpec("RF_OPAdjuster").setCruiserCost(-totalDiscount);
         Global.getSettings().getHullModSpec("RF_OPAdjuster").setDestroyerCost(-totalDiscount);
         Global.getSettings().getHullModSpec("RF_OPAdjuster").setFrigateCost(-totalDiscount);
-        System.out.println(totalDiscount);
     }
 
     private static void addTogglePara(TooltipMakerAPI parent, int key, int section, int activeSection){
@@ -306,6 +326,11 @@ public class MainGUI extends BaseHullMod {
     }
 
     public static boolean isBlacklisted(WeaponSpecAPI weapon){
+        if(weapon.getType() == WeaponAPI.WeaponType.BUILT_IN) return false;
+        if(weapon.getType() == WeaponAPI.WeaponType.DECORATIVE) return false;
+        if(weapon.getType() == WeaponAPI.WeaponType.LAUNCH_BAY) return false;
+        if(weapon.getType() == WeaponAPI.WeaponType.SYSTEM) return false;
+        if(weapon.getType() == WeaponAPI.WeaponType.STATION_MODULE) return false;
         boolean blacklisted = true;
 
         WeaponWhitelist weaponWhitelist = fleetIDWeaponWhitelist.get(currentFleetMemberID);
