@@ -6,3 +6,6 @@ Version 1.0.1
 - Fixed Deco/System/BuiltIn weapons being caught in the blacklist
 - Fixed Log Spam
 - Removed Utility Mod tag
+
+Version 1.1.0
+- Updated to 0.97
