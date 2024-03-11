@@ -9,3 +9,6 @@ Version 1.0.1
 
 Version 1.1.0
 - Updated to 0.97
+
+Version 1.1.1
+- One string change to fix the jar not loading 

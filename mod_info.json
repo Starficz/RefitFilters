@@ -3,7 +3,7 @@
     "name": "Refit Filters",
     "author": "Starficz",
     "utility": "false",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "description": "Adds a selection of hullmods that can be used to filter weapons & wings in the refit screen.",
     "gameVersion": "0.97a-RC6",
     "jars":["jars/RefitFilters.jar"]
