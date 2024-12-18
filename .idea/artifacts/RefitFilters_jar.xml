@@ -1,8 +1,0 @@
-<component name="ArtifactManager">
-  <artifact type="jar" build-on-make="true" name="RefitFilters:jar">
-    <output-path>$PROJECT_DIR$/jars</output-path>
-    <root id="archive" name="RefitFilters.jar">
-      <element id="module-output" name="Refit Filters" />
-    </root>
-  </artifact>
-</component>
