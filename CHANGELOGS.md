@@ -1,5 +1,11 @@
-Verison 1.0.0
-- Initial Release
+Version 2.0.0
+- Rewrote entire mod, now works off of the UI directly in the refit weapon panel
+
+Version 1.1.1
+- One string change to fix the jar not loading
+
+Version 1.1.0
+- Updated to 0.97
 
 Version 1.0.1
 - Fixed Conflict with Vanilla "Field Repairs" skill
@@ -7,8 +13,5 @@ Version 1.0.1
 - Fixed Log Spam
 - Removed Utility Mod tag
 
-Version 1.1.0
-- Updated to 0.97
-
-Version 1.1.1
-- One string change to fix the jar not loading 
+Verison 1.0.0
+- Initial Release

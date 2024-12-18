@@ -1,3 +1,0 @@
-name,id,tier,rarity,tech/manufacturer,tags,uiTags,base value,unlocked,hidden,hiddenEverywhere,cost_frigate,cost_dest,cost_cruiser,cost_capital,script,desc,short,sprite
-Weapon Filter,RF_MainGUI,,,,"no_build_in, no_drop, no_drop_salvage, special",Filter,,TRUE,,,0,0,0,0,org.starficz.refitfilters.MainGUI,Filters weapons based on toggled choices. Hold Caps Lock to cycle active category. Hold 1-4 to toggle.,,graphics/icons/intel/investigation.png
-Filter OP Adjuster,RF_OPAdjuster,,,,,Filter,,,TRUE,TRUE,0,0,0,0,org.starficz.refitfilters.OPAdjuster,,,graphics/icons/intel/investigation.png
