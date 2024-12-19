@@ -1,10 +1,12 @@
 package org.starficz.refitfilters
 
 import com.fs.starfarer.api.Global
+import com.fs.starfarer.api.campaign.CargoAPI
 import com.fs.starfarer.api.combat.DamageType
 import com.fs.starfarer.api.combat.WeaponAPI
 import com.fs.starfarer.api.graphics.SpriteAPI
 import com.fs.starfarer.api.impl.campaign.ids.Tags
+import com.fs.starfarer.api.loading.WeaponSpecAPI
 import com.fs.starfarer.api.ui.*
 import com.fs.starfarer.api.util.Misc
 import lunalib.backend.ui.components.util.TooltipHelper
@@ -45,29 +47,26 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
 
     fun init() : CustomPanelAPI {
 
-        var width = 300f
-        var height = 50f
+        val width = 300f
+        val height = 50f
 
         newFiltersPanel = Global.getSettings().createCustom(width, height, null)
 
-        var element = newFiltersPanel.createUIElement(width, height, false)
+        val element = newFiltersPanel.createUIElement(width, height, false)
         newFiltersPanel.addUIElement(element)
         element.position.inTR(0f, 0f)
 
         element.addLunaElement(0f, 0f).apply {
             renderBorder = false
             advance {
-                updatefilters()
+                updateFilterValues()
             }
         }
 
 
-        var innerCustom = element
+        val innerCustom = element
 
-        cacheAllRestrictedWeaponID()
         filterWeapons()
-        updatePicker()
-        revertAllFilters()
 
         innerCustom.setAreaCheckboxFont("graphics/fonts/victor14.fnt")
 
@@ -174,12 +173,48 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         return newFiltersPanel
     }
 
-    fun updatePicker() {
+    fun filterWeapons(){
+        if(openedFromCampaign){
+            filterCargos()
+        } else{
+            cacheAllRestrictedWeaponID()
+            filterByAddingRestrictedTags()
+            reloadWeaponPicker()
+            revertRestrictedTags()
+        }
+    }
+
+    fun filterCargos(){
+        val playerCargo = Global.getSector().playerFleet.cargo
+        val cargos = ModPlugin.currentEntityCargos
+
+        val originalCargoMap = mutableMapOf<CargoAPI, CargoAPI>()
+        originalCargoMap[playerCargo] = playerCargo.createCopy()
+        for(cargo in cargos){
+            originalCargoMap[cargo] = cargo.createCopy()
+        }
+
+        for(cargo in originalCargoMap){
+            for(weaponStack in cargo.key.weapons){
+                val spec = Global.getSettings().getWeaponSpec(weaponStack.item)
+                if(weaponFiltered(spec)) cargo.key.removeWeapons(weaponStack.item, weaponStack.count)
+            }
+        }
+
+        reloadWeaponPicker()
+
+        for(cargo in originalCargoMap){
+            cargo.key.clear()
+            cargo.key.addAll(cargo.value)
+        }
+    }
+
+    fun reloadWeaponPicker() {
         ReflectionUtils.invoke("notifyFilterChanged", weaponPickerDialog) //Refresh the WeaponPickerDialog
 
         // shift weapons down
-        var additionalHeight = 50f
-        var innerWeaponPanel = ReflectionUtils.invoke("getInnerPanel", weaponPickerDialog) as UIPanelAPI
+        val additionalHeight = 50f
+        val innerWeaponPanel = ReflectionUtils.invoke("getInnerPanel", weaponPickerDialog) as UIPanelAPI
         innerWeaponPanel.addComponent(newFiltersPanel)
 
         var index = 0
@@ -203,7 +238,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
 
         val knownFloats = listOf("PAD", "ITEM_WIDTH", "ITEM_HEIGHT", "origXAlignOffset")
         val knownValues = listOf(382.0f, 385.0f, 0f) // this is so jank, but there really is no other way to get this value
-        var foundFloats = mutableMapOf<String, Float>()
+        val foundFloats = mutableMapOf<String, Float>()
         for(fieldStr in ReflectionUtils.getFieldsOfType(weaponPickerDialog, Float::class.java)){
             if(fieldStr !in knownFloats){
                 val foundFloat = ReflectionUtils.get(fieldStr, weaponPickerDialog) as Float
@@ -223,31 +258,34 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         }
     }
 
-    fun revertAllFilters(){
+    fun revertRestrictedTags(){
         for(spec in Global.getSettings().getAllWeaponSpecs()){
             if(Tags.RESTRICTED in spec.tags && spec.weaponId !in restrictedWeaponsID) spec.tags.remove(Tags.RESTRICTED)
         }
     }
 
-    fun filterWeapons(){
+    fun filterByAddingRestrictedTags(){
         for(spec in Global.getSettings().getAllWeaponSpecs()){
-            if(Tags.RESTRICTED !in spec.tags){
-                if(spec.damageType == DamageType.KINETIC && !ModPlugin.kineticActive) spec.addTag(Tags.RESTRICTED)
-                if(spec.damageType == DamageType.HIGH_EXPLOSIVE && !ModPlugin.heActive) spec.addTag(Tags.RESTRICTED)
-                if(spec.damageType == DamageType.ENERGY && !ModPlugin.energyActive) spec.addTag(Tags.RESTRICTED)
-                if(spec.damageType == DamageType.FRAGMENTATION && !ModPlugin.fragActive) spec.addTag(Tags.RESTRICTED)
-
-                if(!spec.isBeam && !ModPlugin.projectileActive) spec.addTag(Tags.RESTRICTED)
-                if(spec.isBeam && !ModPlugin.beamActive) spec.addTag(Tags.RESTRICTED)
-
-
-                if((spec.getAIHints().contains(WeaponAPI.AIHints.PD) || spec.getAIHints().contains(WeaponAPI.AIHints.PD_ALSO)) && !ModPlugin.pdActive) spec.addTag(Tags.RESTRICTED)
-                if(!(spec.getAIHints().contains(WeaponAPI.AIHints.PD) || spec.getAIHints().contains(WeaponAPI.AIHints.PD_ALSO)) && !ModPlugin.nonpdActive) spec.addTag(Tags.RESTRICTED)
-
-                if(spec.maxRange < ModPlugin.lowerRange && ModPlugin.lowerRange != ModPlugin.minRange) spec.addTag(Tags.RESTRICTED)
-                if(spec.maxRange > ModPlugin.upperRange && ModPlugin.upperRange != ModPlugin.maxRange) spec.addTag(Tags.RESTRICTED)
-            }
+            if(Tags.RESTRICTED !in spec.tags && weaponFiltered(spec)) spec.addTag(Tags.RESTRICTED)
         }
+    }
+
+    fun weaponFiltered(weaponSpec: WeaponSpecAPI): Boolean{
+        if(weaponSpec.damageType == DamageType.KINETIC && !ModPlugin.kineticActive) return true
+        if(weaponSpec.damageType == DamageType.HIGH_EXPLOSIVE && !ModPlugin.heActive) return true
+        if(weaponSpec.damageType == DamageType.ENERGY && !ModPlugin.energyActive) return true
+        if(weaponSpec.damageType == DamageType.FRAGMENTATION && !ModPlugin.fragActive) return true
+
+        if(!weaponSpec.isBeam && !ModPlugin.projectileActive) return true
+        if(weaponSpec.isBeam && !ModPlugin.beamActive) return true
+
+        if((weaponSpec.getAIHints().contains(WeaponAPI.AIHints.PD) || weaponSpec.getAIHints().contains(WeaponAPI.AIHints.PD_ALSO)) && !ModPlugin.pdActive) return true
+        if(!(weaponSpec.getAIHints().contains(WeaponAPI.AIHints.PD) || weaponSpec.getAIHints().contains(WeaponAPI.AIHints.PD_ALSO)) && !ModPlugin.nonpdActive) return true
+
+        if(weaponSpec.maxRange < ModPlugin.lowerRange && ModPlugin.lowerRange != ModPlugin.minRange) return true
+        if(weaponSpec.maxRange > ModPlugin.upperRange && ModPlugin.upperRange != ModPlugin.maxRange) return true
+
+        return false
     }
 
     fun cacheAllRestrictedWeaponID(){
@@ -255,8 +293,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         restrictedWeaponsID = restrictedWeps.map { it.weaponId }.toSet()
     }
 
-    fun updatefilters(){
-
+    fun updateFilterValues(){
 
         // handle click logic for dual beam/projectile
         if(beamButton.isChecked != ModPlugin.beamActive){
@@ -311,12 +348,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         }
 
         // if filters changed, run script
-        if(filtersChanged){
-            cacheAllRestrictedWeaponID()
-            filterWeapons()
-            updatePicker()
-            revertAllFilters()
-        }
+        if(filtersChanged) filterWeapons()
     }
 
     fun damageTypeClicked(clicked: ButtonAPI){
@@ -329,9 +361,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
                 button.isChecked = true
                 continue
             }
-            if(Keyboard.isKeyDown(42) || Keyboard.isKeyDown(29)){
-
-            } else{
+            if(!(Keyboard.isKeyDown(42) && Keyboard.isKeyDown(29))){
                 if(button == clicked) button.isChecked = true
                 else button.isChecked = false
             }

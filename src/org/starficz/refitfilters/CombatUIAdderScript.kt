@@ -15,21 +15,21 @@ class CombatUIAdderScript : BaseEveryFrameCombatPlugin() {
     @Transient var dockedPanel: CustomPanelAPI? = null
 
     override fun advance(amount: Float, events: MutableList<InputEventAPI>?) {
-        var state = AppDriver.getInstance().currentState
+        val state = AppDriver.getInstance().currentState
         if (state !is TitleScreenState) return
 
-        var core = ReflectionUtils.invoke("getScreenPanel", state)
+        val core = ReflectionUtils.invoke("getScreenPanel", state)
 
         if (core !is UIPanelAPI) return
 
 
         //Look for the weapon picker dialog at the root of the current UI tree
-        var weaponDialogPanel = core.getChildrenCopy().find { ReflectionUtils.hasMethodOfName("notifyFilterChanged", it) }
+        val weaponDialogPanel = core.getChildrenCopy().find { ReflectionUtils.hasMethodOfName("notifyFilterChanged", it) }
 
         if (weaponDialogPanel is UIPanelAPI) {
-            var innerWeaponPanel = ReflectionUtils.invoke("getInnerPanel", weaponDialogPanel) as UIPanelAPI
-            if (dockedPanel == null || !(dockedPanel!! in innerWeaponPanel.getChildrenCopy())) {
-                var creator = PanelCreator(weaponDialogPanel, false)
+            val innerWeaponPanel = ReflectionUtils.invoke("getInnerPanel", weaponDialogPanel) as UIPanelAPI
+            if (dockedPanel == null || dockedPanel!! !in innerWeaponPanel.getChildrenCopy()) {
+                val creator = PanelCreator(weaponDialogPanel, false)
                 dockedPanel = creator.init()
             }
         }

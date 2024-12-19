@@ -2,6 +2,7 @@ package org.starficz.refitfilters
 
 import com.fs.starfarer.api.BaseModPlugin
 import com.fs.starfarer.api.Global
+import com.fs.starfarer.api.campaign.CargoAPI
 import com.fs.starfarer.api.impl.campaign.ids.Tags
 import java.util.HashSet
 
@@ -19,6 +20,7 @@ class ModPlugin : BaseModPlugin() {
         var upperRange = 1500
         val minRange = 0
         val maxRange = 1500
+        var currentEntityCargos = mutableListOf<CargoAPI>()
     }
 
     override fun onGameLoad(newGame: Boolean) {

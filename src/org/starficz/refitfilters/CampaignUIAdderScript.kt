@@ -2,7 +2,10 @@ package org.starficz.refitfilters
 
 import com.fs.starfarer.api.EveryFrameScript
 import com.fs.starfarer.api.Global
+import com.fs.starfarer.api.campaign.BaseCampaignEventListener
+import com.fs.starfarer.api.campaign.CampaignEventListener
 import com.fs.starfarer.api.campaign.CoreUITabId
+import com.fs.starfarer.api.campaign.econ.MarketAPI
 import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
 import com.fs.starfarer.campaign.CampaignState
@@ -10,7 +13,7 @@ import com.fs.state.AppDriver
 import org.starficz.refitfilters.ReflectionUtils
 import org.starficz.refitfilters.getChildrenCopy
 
-class CampaignUIAdderScript : EveryFrameScript {
+class CampaignUIAdderScript : EveryFrameScript, BaseCampaignEventListener(true) {
 
     @Transient var dockedPanel: CustomPanelAPI? = null
 
@@ -27,7 +30,7 @@ class CampaignUIAdderScript : EveryFrameScript {
         if (!Global.getSector().isPaused) return //Return if not paused
         if (Global.getSector().campaignUI.currentCoreTab != CoreUITabId.REFIT) return //Return if not Refit
 
-        var state = AppDriver.getInstance().currentState
+        val state = AppDriver.getInstance().currentState
         if (state !is CampaignState) return
 
         var core: UIPanelAPI? = null
@@ -35,7 +38,7 @@ class CampaignUIAdderScript : EveryFrameScript {
         var docked = false
 
         //Try to check if a dialog is open, and grab the CoreUI from it (Relevant for when refit is opened while docked to a colony, etc)
-        var dialog = ReflectionUtils.invoke("getEncounterDialog", state)
+        val dialog = ReflectionUtils.invoke("getEncounterDialog", state)
         if (dialog != null)
         {
             docked = true
@@ -51,14 +54,24 @@ class CampaignUIAdderScript : EveryFrameScript {
         if (core == null) return
 
         //Look for the weapon picker dialog at the root of the current UI tree
-        var weaponDialogPanel = core.getChildrenCopy().find { ReflectionUtils.hasMethodOfName("notifyFilterChanged", it) }
+        val weaponDialogPanel = core.getChildrenCopy().find { ReflectionUtils.hasMethodOfName("notifyFilterChanged", it) }
 
         if (weaponDialogPanel is UIPanelAPI) {
-            var innerWeaponPanel = ReflectionUtils.invoke("getInnerPanel", weaponDialogPanel) as UIPanelAPI
-            if (dockedPanel == null || !(dockedPanel!! in innerWeaponPanel.getChildrenCopy())) {
-                var creator = PanelCreator(weaponDialogPanel, true)
+            val innerWeaponPanel = ReflectionUtils.invoke("getInnerPanel", weaponDialogPanel) as UIPanelAPI
+            if (dockedPanel == null || dockedPanel!! !in innerWeaponPanel.getChildrenCopy()) {
+                val creator = PanelCreator(weaponDialogPanel, true)
                 dockedPanel = creator.init()
             }
         }
+    }
+
+    override fun reportPlayerOpenedMarket(market: MarketAPI) {
+        for (submarket in market.submarketsCopy){
+            ModPlugin.currentEntityCargos.add(submarket.cargo)
+        }
+    }
+
+    override fun reportPlayerClosedMarket(market: MarketAPI) {
+        ModPlugin.currentEntityCargos.clear()
     }
 }
