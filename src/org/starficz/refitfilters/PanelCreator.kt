@@ -15,6 +15,7 @@ import lunalib.lunaExtensions.addLunaElement
 import lunalib.lunaExtensions.addLunaSpriteElement
 import lunalib.lunaUI.elements.LunaSpriteElement
 import org.lwjgl.input.Keyboard
+import org.lwjgl.input.Mouse
 import java.awt.Color
 import java.lang.Math.round
 
@@ -65,6 +66,8 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             renderBorder = false
             advance {
                 updateFilterValues()
+                // focus stops weapon tooltips on hover from working
+                //if(!Mouse.isButtonDown(0)) searchBox.grabFocus()
             }
         }
 
@@ -183,7 +186,10 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
 
         searchBox = innerCustom.addTextField(273f,1f).apply {
             position.rightOfTop(resetButton, 1f)
-            grabFocus()
+            text = ModPlugin.currentSearch
+            isVerticalCursor = true
+            // focus stops weapon tooltips on hover from working
+            //grabFocus()
         }
 
         return newFiltersPanel
@@ -279,7 +285,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
                     for(weapon in sortedWeaponSpecPairs){
                         //(weaponsList as com.fs.starfarer.coreui.w).addItem(weapon.first as com.fs.starfarer.ui.b)
 
-                        ReflectionUtils.invokeMethodHandle.invoke(method, weaponsList, weapon.first)
+                        ReflectionUtils.rawInvoke(method, weaponsList, weapon.first)
                     }
                 }
 

@@ -13,7 +13,7 @@ object ReflectionUtils {
 
     private val methodClass = Class.forName("java.lang.reflect.Method", false, Class::class.java.classLoader)
     private val getMethodNameHandle = MethodHandles.lookup().findVirtual(methodClass, "getName", MethodType.methodType(String::class.java))
-    val invokeMethodHandle = MethodHandles.lookup().findVirtual(methodClass, "invoke", MethodType.methodType(Any::class.java, Any::class.java, Array<Any>::class.java))
+    private val invokeMethodHandle = MethodHandles.lookup().findVirtual(methodClass, "invoke", MethodType.methodType(Any::class.java, Any::class.java, Array<Any>::class.java))
     private val getFieldTypeHandle = MethodHandles.lookup().findVirtual(fieldClass, "getType", MethodType.methodType(Class::class.java))
 
     internal val getMethodReturnHandle = MethodHandles.lookup().findVirtual(methodClass, "getReturnType", MethodType.methodType(Class::class.java))
@@ -118,6 +118,10 @@ object ReflectionUtils {
             clazz.getDeclaredMethod(methodName, *methodType.parameterArray())
         }
 
+        return invokeMethodHandle.invoke(method, instance, arguments)
+    }
+
+    fun rawInvoke(method: Any?, instance: Any, vararg arguments: Any?): Any? {
         return invokeMethodHandle.invoke(method, instance, arguments)
     }
 
