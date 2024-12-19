@@ -21,9 +21,11 @@ class ModPlugin : BaseModPlugin() {
         val minRange = 0
         val maxRange = 1500
         var currentEntityCargos = mutableListOf<CargoAPI>()
+        var currentSearch = ""
     }
 
     override fun onGameLoad(newGame: Boolean) {
         Global.getSector().addTransientScript(CampaignUIAdderScript())
+        Global.getSector().addTransientListener(CampaignMarketListener())
     }
 }

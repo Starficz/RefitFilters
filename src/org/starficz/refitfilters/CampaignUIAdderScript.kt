@@ -13,7 +13,7 @@ import com.fs.state.AppDriver
 import org.starficz.refitfilters.ReflectionUtils
 import org.starficz.refitfilters.getChildrenCopy
 
-class CampaignUIAdderScript : EveryFrameScript, BaseCampaignEventListener(true) {
+class CampaignUIAdderScript : EveryFrameScript{
 
     @Transient var dockedPanel: CustomPanelAPI? = null
 
@@ -63,15 +63,5 @@ class CampaignUIAdderScript : EveryFrameScript, BaseCampaignEventListener(true) 
                 dockedPanel = creator.init()
             }
         }
-    }
-
-    override fun reportPlayerOpenedMarket(market: MarketAPI) {
-        for (submarket in market.submarketsCopy){
-            ModPlugin.currentEntityCargos.add(submarket.cargo)
-        }
-    }
-
-    override fun reportPlayerClosedMarket(market: MarketAPI) {
-        ModPlugin.currentEntityCargos.clear()
     }
 }

@@ -9,6 +9,7 @@ import com.fs.starfarer.api.impl.campaign.ids.Tags
 import com.fs.starfarer.api.loading.WeaponSpecAPI
 import com.fs.starfarer.api.ui.*
 import com.fs.starfarer.api.util.Misc
+import com.fs.starfarer.loading.specs.BaseWeaponSpec
 import lunalib.backend.ui.components.util.TooltipHelper
 import lunalib.lunaExtensions.addLunaElement
 import lunalib.lunaExtensions.addLunaSpriteElement
@@ -18,7 +19,11 @@ import java.awt.Color
 import java.lang.Math.round
 
 class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: Boolean) {
+    val weaponListClass = ReflectionUtils.findFieldWithMethodName(weaponPickerDialog, "getScroller")!!.get(weaponPickerDialog)!!.javaClass
+
     var restrictedWeaponsID: Set<String> = HashSet()
+    lateinit var newFiltersPanel: CustomPanelAPI
+
     lateinit var kineticButton: ButtonAPI
     lateinit var keIcon: LunaSpriteElement
     lateinit var heButton: ButtonAPI
@@ -32,9 +37,10 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
     lateinit var beamButton: ButtonAPI
     lateinit var pdButton: ButtonAPI
     lateinit var nonpdButton: ButtonAPI
-    lateinit var newFiltersPanel: CustomPanelAPI
 
     lateinit var rangeSlider: RangeSlider
+    lateinit var searchBox: TextFieldAPI
+    lateinit var resetButton: ButtonAPI
 
     val kineticIconString: String = "graphics/ui/icons/damagetype_kinetic.png"
     val highExplosiveIconString: String = "graphics/ui/icons/damagetype_high_explosive.png"
@@ -45,11 +51,10 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
     val energyColor = Color(125, 194, 255)
     val fragColor = Color(255, 255, 131)
 
+    val width = 300f
+    val height = 75f
+
     fun init() : CustomPanelAPI {
-
-        val width = 300f
-        val height = 50f
-
         newFiltersPanel = Global.getSettings().createCustom(width, height, null)
 
         val element = newFiltersPanel.createUIElement(width, height, false)
@@ -170,6 +175,17 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             borderColor = Misc.getHighlightColor().darker()
         }
 
+        resetButton = innerCustom.addAreaCheckbox("RESET FILTERS", null, standardColor.darker(), standardColor.darker().darker().darker(), standardColor, 103f, 28f, 1f).apply {
+            isChecked = true
+            position.belowLeft(kineticButton, 1f)
+        }
+        innerCustom.addTooltipToPrevious(TooltipHelper("Reset all filters.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+
+        searchBox = innerCustom.addTextField(273f,1f).apply {
+            position.rightOfTop(resetButton, 1f)
+            grabFocus()
+        }
+
         return newFiltersPanel
     }
 
@@ -213,7 +229,6 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         ReflectionUtils.invoke("notifyFilterChanged", weaponPickerDialog) //Refresh the WeaponPickerDialog
 
         // shift weapons down
-        val additionalHeight = 50f
         val innerWeaponPanel = ReflectionUtils.invoke("getInnerPanel", weaponPickerDialog) as UIPanelAPI
         innerWeaponPanel.addComponent(newFiltersPanel)
 
@@ -225,6 +240,48 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
                 val weaponsList = uiElements[index+1]
                 val eitherNoWeaponsOrNewFilters = uiElements[index+2]
                 val newFilters = uiElements[uiElements.size - 1]
+
+                // sort the weapons list by text if not empty
+                if(ModPlugin.currentSearch.isNotEmpty()){
+                    // get the weapon UI list
+                    val individualWeapons = (ReflectionUtils.invoke("getItems", weaponsList) as List<*>).toMutableList()
+
+                    // map each weapon spec onto their UIpanel
+                    val weaponSpecPairs = individualWeapons.mapNotNull { weapon ->
+                        val weaponTooltip = ReflectionUtils.invoke("getTooltip", weapon!!)!!
+
+                        val weaponSpecField = ReflectionUtils.getFieldsOfType(weaponTooltip, BaseWeaponSpec::class.java)
+                        if (weaponSpecField.size != 1) throw Exception("Unable to differentiate weaponTooltip's obfuscated weaponSpec field")
+
+                        val weaponSpec = ReflectionUtils.get(weaponSpecField[0], weaponTooltip) as WeaponSpecAPI
+
+                        weapon to weaponSpec
+                    }
+
+                    // sort the weapons by fuzzy search score
+                    val sortedWeaponSpecPairs = weaponSpecPairs.sortedWith(
+                        compareByDescending (
+                            {FuzzySearch.fuzzyMatch(ModPlugin.currentSearch, it.second.weaponName).second}
+                        )
+                    )
+
+                    // clear the weapons list
+                    ReflectionUtils.invoke("clear", weaponsList)
+
+                    // getting the correct classes to reinsert all the weaponUI's int the parent scroller panel
+                    val argumentsList = ReflectionUtils.getMethodArguments("addItem", weaponListClass)
+                    var correctArguments: Array<Class<*>>? = null
+                    for(arguments in argumentsList){
+                        if (arguments.size == 1) correctArguments = arguments
+                    }
+                    val method = weaponListClass.getMethod("addItem", *correctArguments!!)
+
+                    for(weapon in sortedWeaponSpecPairs){
+                        //(weaponsList as com.fs.starfarer.coreui.w).addItem(weapon.first as com.fs.starfarer.ui.b)
+
+                        ReflectionUtils.invokeMethodHandle.invoke(method, weaponsList, weapon.first)
+                    }
+                }
 
                 newFilters.position.belowLeft(existingFilters, 0f)
                 weaponsList.position.belowLeft(newFilters, 4f)
@@ -246,16 +303,14 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             }
         }
 
-        if(foundFloats.size == 1){
-            val heightField = foundFloats.keys.first()
+        if(foundFloats.size != 1) throw Exception("Unable to differentiate weaponPickerDialog's obf height field")
 
-            val height = ReflectionUtils.get(heightField, weaponPickerDialog) as Float
-            ReflectionUtils.set(heightField, weaponPickerDialog, height + additionalHeight)
+        val heightField = foundFloats.keys.first()
 
-            ReflectionUtils.invoke("setSize", weaponPickerDialog, 400f, height + additionalHeight)
-        } else{
-            throw Exception("Unable to differentiate weaponPickerDialog's obf height field")
-        }
+        val height = ReflectionUtils.get(heightField, weaponPickerDialog) as Float
+        ReflectionUtils.set(heightField, weaponPickerDialog, height + this.height)
+
+        ReflectionUtils.invoke("setSize", weaponPickerDialog, 400f, height + this.height)
     }
 
     fun revertRestrictedTags(){
@@ -294,6 +349,43 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
     }
 
     fun updateFilterValues(){
+
+        // reset everything
+        if(!resetButton.isChecked){
+            beamButton.isChecked = true
+            projectileButton.isChecked = true
+            pdButton.isChecked = true
+            nonpdButton.isChecked = true
+
+            kineticButton.isChecked = true
+            heButton.isChecked = true
+            energyButton.isChecked = true
+            fragButton.isChecked = true
+
+            updateIcon(DamageType.KINETIC, keIcon.getSprite(), kineticButton)
+            updateIcon(DamageType.HIGH_EXPLOSIVE, heIcon.getSprite(), heButton)
+            updateIcon(DamageType.ENERGY, energyIcon.getSprite(), energyButton)
+            updateIcon(DamageType.FRAGMENTATION, fragIcon.getSprite(), fragButton)
+
+            rangeSlider.setLevelsTo(0f, 1f)
+            searchBox.text = ""
+            resetButton.isChecked = true
+
+            ModPlugin.beamActive = true
+            ModPlugin.projectileActive = true
+            ModPlugin.pdActive = true
+            ModPlugin.nonpdActive = true
+            ModPlugin.kineticActive = true
+            ModPlugin.heActive = true
+            ModPlugin.energyActive = true
+            ModPlugin.fragActive = true
+            ModPlugin.lowerRange = ModPlugin.minRange
+            ModPlugin.upperRange = ModPlugin.maxRange
+            ModPlugin.currentSearch = ""
+
+            filterWeapons()
+            return
+        }
 
         // handle click logic for dual beam/projectile
         if(beamButton.isChecked != ModPlugin.beamActive){
@@ -339,11 +431,16 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
 
         // map range slider to upper/lower range
         if(round(rangeSlider.getCurrentMinValue())!= ModPlugin.lowerRange){
-            ModPlugin.lowerRange = rangeSlider.getCurrentMinValue().toInt()
+            ModPlugin.lowerRange = round(rangeSlider.getCurrentMinValue())
             filtersChanged = true
         }
         if(round(rangeSlider.getCurrentMaxValue()) != ModPlugin.upperRange){
-            ModPlugin.upperRange = rangeSlider.getCurrentMaxValue().toInt()
+            ModPlugin.upperRange = round(rangeSlider.getCurrentMaxValue())
+            filtersChanged = true
+        }
+
+        if(ModPlugin.currentSearch != searchBox.text){
+            ModPlugin.currentSearch = searchBox.text
             filtersChanged = true
         }
 

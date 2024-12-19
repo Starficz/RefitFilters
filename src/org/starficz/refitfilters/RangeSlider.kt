@@ -11,7 +11,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 class RangeSlider(tooltip: TooltipMakerAPI, width: Float, height: Float, var valueA: Float, var valueB: Float,
-                  var minValue: Float, var maxValue: Float, var increment: Float = 100f) : LunaElement(tooltip, width, height) {
+                  val minValue: Float, val maxValue: Float, val increment: Float = 100f) : LunaElement(tooltip, width, height) {
 
     val sliderNodeWidth = 2f
     val tickWidth = 1f
@@ -87,6 +87,13 @@ class RangeSlider(tooltip: TooltipMakerAPI, width: Float, height: Float, var val
         this.innerElement.addPara("1500", 0f).apply {
             position.inTL(width-19f,0f)
         }
+    }
+
+    fun setLevelsTo(a: Float, b: Float){
+        levelA = a
+        levelB = b
+        valueA = linMap(minValue, maxValue, 0f, 1f, levelA)
+        valueB = linMap(minValue, maxValue, 0f, 1f, levelB)
     }
 
     override fun advance(amount: Float) {
