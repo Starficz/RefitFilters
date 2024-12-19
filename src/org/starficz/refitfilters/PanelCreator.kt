@@ -294,23 +294,32 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         }
 
         val knownFloats = listOf("PAD", "ITEM_WIDTH", "ITEM_HEIGHT", "origXAlignOffset")
-        val knownValues = listOf(382.0f, 385.0f, 0f) // this is so jank, but there really is no other way to get this value
-        val foundFloats = mutableMapOf<String, Float>()
+        val knownWidths = listOf(382.0f, 385.0f)
+        var pickerWidth: Float? = null
+        var heightField: String? = null
+        var pickerHeight: Float? = null
         for(fieldStr in ReflectionUtils.getFieldsOfType(weaponPickerDialog, Float::class.java)){
             if(fieldStr !in knownFloats){
                 val foundFloat = ReflectionUtils.get(fieldStr, weaponPickerDialog) as Float
-                if (foundFloat !in knownValues) foundFloats.put(fieldStr, foundFloat)
+                if (foundFloat in knownWidths) {
+                    if (pickerWidth == null) pickerWidth = foundFloat
+                    else throw Exception("Unable to differentiate weaponPickerDialog's obf fields")
+                }
+                else if (foundFloat != 0f && foundFloat !in knownWidths) {
+                    if (pickerHeight == null) {
+                        pickerHeight = foundFloat
+                        heightField = fieldStr
+                    }
+                    else throw Exception("Unable to differentiate weaponPickerDialog's obf fields")
+                }
             }
         }
+        if(heightField == null || pickerHeight == null || pickerWidth == null) {
+            throw Exception("Unable to differentiate weaponPickerDialog's obf fields")
+        }
 
-        if(foundFloats.size != 1) throw Exception("Unable to differentiate weaponPickerDialog's obf height field")
-
-        val heightField = foundFloats.keys.first()
-
-        val height = ReflectionUtils.get(heightField, weaponPickerDialog) as Float
-        ReflectionUtils.set(heightField, weaponPickerDialog, height + this.height)
-
-        ReflectionUtils.invoke("setSize", weaponPickerDialog, 400f, height + this.height)
+        ReflectionUtils.set(heightField, weaponPickerDialog, pickerHeight + height)
+        ReflectionUtils.invoke("setSize", weaponPickerDialog, pickerWidth, pickerHeight + height)
     }
 
     fun revertRestrictedTags(){

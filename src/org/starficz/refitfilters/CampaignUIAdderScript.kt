@@ -54,7 +54,7 @@ class CampaignUIAdderScript : EveryFrameScript{
         if (core == null) return
 
         //Look for the weapon picker dialog at the root of the current UI tree
-        val weaponDialogPanel = core.getChildrenCopy().find { ReflectionUtils.hasMethodOfName("notifyFilterChanged", it) }
+        val weaponDialogPanel = core.getChildrenCopy().find { ReflectionUtils.hasMethodOfName("getPickedWeaponSpec", it) }
 
         if (weaponDialogPanel is UIPanelAPI) {
             val innerWeaponPanel = ReflectionUtils.invoke("getInnerPanel", weaponDialogPanel) as UIPanelAPI
