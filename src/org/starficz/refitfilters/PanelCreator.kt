@@ -15,7 +15,6 @@ import lunalib.lunaExtensions.addLunaElement
 import lunalib.lunaExtensions.addLunaSpriteElement
 import lunalib.lunaUI.elements.LunaSpriteElement
 import org.lwjgl.input.Keyboard
-import org.lwjgl.input.Mouse
 import java.awt.Color
 import java.lang.Math.round
 
@@ -24,6 +23,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
 
     var restrictedWeaponsID: Set<String> = HashSet()
     lateinit var newFiltersPanel: CustomPanelAPI
+    lateinit var topFiltersPanel: CustomPanelAPI
 
     lateinit var kineticButton: ButtonAPI
     lateinit var keIcon: LunaSpriteElement
@@ -40,7 +40,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
     lateinit var nonpdButton: ButtonAPI
 
     lateinit var rangeSlider: RangeSlider
-    lateinit var searchBox: TextFieldAPI
+    lateinit var searchBox: SearchField
     lateinit var resetButton: ButtonAPI
 
     val kineticIconString: String = "graphics/ui/icons/damagetype_kinetic.png"
@@ -53,69 +53,63 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
     val fragColor = Color(255, 255, 131)
 
     val width = 300f
-    val height = 75f
+    val height = 79f
 
     fun init() : CustomPanelAPI {
-        newFiltersPanel = Global.getSettings().createCustom(width, height, null)
+        var topPanelHeight = 27f
+        newFiltersPanel = Global.getSettings().createCustom(width, height-topPanelHeight, null)
+        val mainElement = newFiltersPanel.createUIElement(width, height-topPanelHeight, false)
+        newFiltersPanel.addUIElement(mainElement)
+        mainElement.position.inTR(0f, 0f)
 
-        val element = newFiltersPanel.createUIElement(width, height, false)
-        newFiltersPanel.addUIElement(element)
-        element.position.inTR(0f, 0f)
-
-        element.addLunaElement(0f, 0f).apply {
+        // hijacking a luna element for advance
+        mainElement.addLunaElement(0f, 0f).apply {
             renderBorder = false
             advance {
                 updateFilterValues()
-                // focus stops weapon tooltips on hover from working
-                //if(!Mouse.isButtonDown(0)) searchBox.grabFocus()
             }
         }
 
-
-        val innerCustom = element
-
-        filterWeapons()
-
-        innerCustom.setAreaCheckboxFont("graphics/fonts/victor14.fnt")
-
+        mainElement.setAreaCheckboxFont("graphics/fonts/victor14.fnt")
 
         val standardColor = Global.getSettings().brightPlayerColor
 
-        projectileButton = innerCustom.addAreaCheckbox("PROJECTILE", null, standardColor.darker(), standardColor.darker().darker().darker(), standardColor, 93f, 25f, 0f).apply {
+        projectileButton = mainElement.addAreaCheckbox("PROJECTILE", null, standardColor.darker(), standardColor.darker().darker().darker(), standardColor, 93f, 25f, 0f).apply {
             isChecked = ModPlugin.projectileActive
             position.setXAlignOffset(-5f)
             setShortcut(8, true)
         }
-        innerCustom.addTooltipToPrevious(TooltipHelper("Show projectile weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltipToPrevious(TooltipHelper("Show projectile weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
 
-        beamButton = innerCustom.addAreaCheckbox("BEAM", null, standardColor.darker(), standardColor.darker().darker().darker(),  standardColor, 94f, 25f, 1f).apply {
+        beamButton = mainElement.addAreaCheckbox("BEAM", null, standardColor.darker(), standardColor.darker().darker().darker(),  standardColor, 94f, 25f, 1f).apply {
             isChecked = ModPlugin.beamActive
             position.rightOfTop(projectileButton, 1f)
             setShortcut(9, true)
         }
-        innerCustom.addTooltipToPrevious(TooltipHelper("Show beam weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltipToPrevious(TooltipHelper("Show beam weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
 
-        pdButton = innerCustom.addAreaCheckbox("PD", null, standardColor.darker(), standardColor.darker().darker().darker(), standardColor, 94f, 25f, 1f).apply {
+        pdButton = mainElement.addAreaCheckbox("PD", null, standardColor.darker(), standardColor.darker().darker().darker(), standardColor, 94f, 25f, 1f).apply {
             isChecked = ModPlugin.pdActive
             position.rightOfTop(beamButton, 1f)
             setShortcut(10, true)
         }
-        innerCustom.addTooltipToPrevious(TooltipHelper("Show point defense weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltipToPrevious(TooltipHelper("Show point defense weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
 
-        nonpdButton = innerCustom.addAreaCheckbox("NON-PD", null, standardColor.darker(), standardColor.darker().darker().darker(), standardColor, 93f, 25f, 1f).apply {
+        nonpdButton = mainElement.addAreaCheckbox("NON-PD", null, standardColor.darker(), standardColor.darker().darker().darker(), standardColor, 93f, 25f, 1f).apply {
             isChecked = ModPlugin.nonpdActive
             position.rightOfTop(pdButton, 1f)
             setShortcut(11, true)
         }
-        innerCustom.addTooltipToPrevious(TooltipHelper("Show standard weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltipToPrevious(TooltipHelper("Show standard weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
 
-        kineticButton = innerCustom.addAreaCheckbox("", null, keColor.darker(), keColor.darker().darker(), keColor, 25f, 25f, 0f).apply {
+        kineticButton = mainElement.addAreaCheckbox("", null, keColor.darker(), keColor.darker().darker(), keColor, 25f, 25f, 0f).apply {
             glowBrightness = 0.5f
             isChecked = ModPlugin.kineticActive
             position.belowLeft(projectileButton, 1f)
+            //position.belowLeft(resetButton, 1f)
         }
-        innerCustom.addTooltipToPrevious(TooltipHelper("Show kinetic weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
-        keIcon = innerCustom.addLunaSpriteElement(kineticIconString, LunaSpriteElement.ScalingTypes.STRETCH_SPRITE, 25f,25f).apply {
+        mainElement.addTooltipToPrevious(TooltipHelper("Show kinetic weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        keIcon = mainElement.addLunaSpriteElement(kineticIconString, LunaSpriteElement.ScalingTypes.STRETCH_SPRITE, 25f,25f).apply {
             onClick {
                 playClickSound()
                 damageTypeClicked(kineticButton)
@@ -124,13 +118,13 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             updateIcon(DamageType.KINETIC, getSprite(), kineticButton)
         }
 
-        heButton = innerCustom.addAreaCheckbox("", null, heColor.darker(), heColor.darker().darker(), heColor.brighter(), 25f, 25f, 1f).apply {
+        heButton = mainElement.addAreaCheckbox("", null, heColor.darker(), heColor.darker().darker(), heColor.brighter(), 25f, 25f, 1f).apply {
             isChecked = ModPlugin.heActive
             position.rightOfTop(kineticButton, 1f)
             glowBrightness = 0.5f
         }
-        innerCustom.addTooltipToPrevious(TooltipHelper("Show high explosive weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
-        heIcon = innerCustom.addLunaSpriteElement(highExplosiveIconString, LunaSpriteElement.ScalingTypes.STRETCH_SPRITE, 25f,25f).apply {
+        mainElement.addTooltipToPrevious(TooltipHelper("Show high explosive weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        heIcon = mainElement.addLunaSpriteElement(highExplosiveIconString, LunaSpriteElement.ScalingTypes.STRETCH_SPRITE, 25f,25f).apply {
             onClick {
                 playClickSound()
                 damageTypeClicked(heButton)
@@ -139,13 +133,13 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             position.setYAlignOffset(25f)
         }
 
-        energyButton = innerCustom.addAreaCheckbox("", null, energyColor.darker(), energyColor.darker().darker(), energyColor, 25f, 25f, 1f).apply {
+        energyButton = mainElement.addAreaCheckbox("", null, energyColor.darker(), energyColor.darker().darker(), energyColor, 25f, 25f, 1f).apply {
             isChecked = ModPlugin.energyActive
             position.rightOfTop(heButton, 1f)
             glowBrightness = 0.5f
         }
-        innerCustom.addTooltipToPrevious(TooltipHelper("Show energy weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
-        energyIcon = innerCustom.addLunaSpriteElement(energyIconString, LunaSpriteElement.ScalingTypes.STRETCH_SPRITE, 25f,25f).apply {
+        mainElement.addTooltipToPrevious(TooltipHelper("Show energy weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        energyIcon = mainElement.addLunaSpriteElement(energyIconString, LunaSpriteElement.ScalingTypes.STRETCH_SPRITE, 25f,25f).apply {
             onClick {
                 playClickSound()
                 damageTypeClicked(energyButton)
@@ -154,13 +148,13 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             updateIcon(DamageType.ENERGY, getSprite(), energyButton)
         }
 
-        fragButton = innerCustom.addAreaCheckbox("", null, fragColor.darker(), fragColor.darker().darker(), fragColor, 25f, 25f, 1f).apply {
+        fragButton = mainElement.addAreaCheckbox("", null, fragColor.darker(), fragColor.darker().darker(), fragColor, 25f, 25f, 1f).apply {
             isChecked = ModPlugin.fragActive
             position.rightOfTop(energyButton, 1f)
             glowBrightness = 0.5f
         }
-        innerCustom.addTooltipToPrevious(TooltipHelper("Show fragmentation weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
-        fragIcon = innerCustom.addLunaSpriteElement(fragmentationIconString, LunaSpriteElement.ScalingTypes.STRETCH_SPRITE, 25f,25f).apply {
+        mainElement.addTooltipToPrevious(TooltipHelper("Show fragmentation weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        fragIcon = mainElement.addLunaSpriteElement(fragmentationIconString, LunaSpriteElement.ScalingTypes.STRETCH_SPRITE, 25f,25f).apply {
             onClick {
                 playClickSound()
                 damageTypeClicked(fragButton)
@@ -168,30 +162,36 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             position.setYAlignOffset(25f)
             updateIcon(DamageType.FRAGMENTATION, getSprite(), fragButton)
         }
-        innerCustom.setParaFontVictor14()
-        val rangeLabel = innerCustom.addPara("RANGE", 1f)
+        mainElement.setParaFontVictor14()
+        val rangeLabel = mainElement.addPara("RANGE", 1f)
         rangeLabel.position.rightOfMid(fragButton, 6f)
 
-        rangeSlider = RangeSlider(innerCustom, 200f, 25f, ModPlugin.lowerRange.toFloat(), ModPlugin.upperRange.toFloat(), ModPlugin.minRange.toFloat(), ModPlugin.maxRange.toFloat()).apply {
+        rangeSlider = RangeSlider(mainElement, 200f, 25f, ModPlugin.lowerRange.toFloat(), ModPlugin.upperRange.toFloat(), ModPlugin.minRange.toFloat(), ModPlugin.maxRange.toFloat()).apply {
             position.rightOfTop(fragButton, 55f)
             backgroundColor = Misc.getHighlightColor().darker().darker().darker()
             borderColor = Misc.getHighlightColor().darker()
         }
 
-        resetButton = innerCustom.addAreaCheckbox("RESET FILTERS", null, standardColor.darker(), standardColor.darker().darker().darker(), standardColor, 103f, 28f, 1f).apply {
+        topFiltersPanel = Global.getSettings().createCustom(width, topPanelHeight, null)
+        val topElement = topFiltersPanel.createUIElement(width, topPanelHeight, false)
+        topFiltersPanel.addUIElement(topElement)
+        topElement.position.inRMid(0f)
+        topElement.setAreaCheckboxFont("graphics/fonts/victor14.fnt")
+
+        resetButton = topElement.addAreaCheckbox("RESET FILTERS", null, standardColor.darker(), standardColor.darker().darker().darker(), standardColor, 125f, 25f, 1f).apply {
             isChecked = true
-            position.belowLeft(kineticButton, 1f)
+            //position.belowLeft(kineticButton, 1f)
+            //position.belowLeft(projectileButton, 1f)
+            position.setXAlignOffset(0f)
         }
-        innerCustom.addTooltipToPrevious(TooltipHelper("Reset all filters.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        topElement.addTooltipToPrevious(TooltipHelper("Reset all filters.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
 
-        searchBox = innerCustom.addTextField(273f,1f).apply {
-            position.rightOfTop(resetButton, 1f)
-            text = ModPlugin.currentSearch
-            isVerticalCursor = true
-            // focus stops weapon tooltips on hover from working
-            //grabFocus()
+        searchBox = SearchField(topElement, 251f, 25f, ModPlugin.currentSearch).apply {
+            position.rightOfMid(resetButton, 1f)
+            renderBorder = false
         }
 
+        filterWeapons()
         return newFiltersPanel
     }
 
@@ -236,6 +236,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
 
         // shift weapons down
         val innerWeaponPanel = ReflectionUtils.invoke("getInnerPanel", weaponPickerDialog) as UIPanelAPI
+        innerWeaponPanel.addComponent(topFiltersPanel)
         innerWeaponPanel.addComponent(newFiltersPanel)
 
         var index = 0
@@ -244,7 +245,8 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             if (ReflectionUtils.hasMethodOfName("addItem", uiElement)){
                 val existingFilters = uiElements[index]
                 val weaponsList = uiElements[index+1]
-                val eitherNoWeaponsOrNewFilters = uiElements[index+2]
+                val eitherNoWeaponsOrTopFilters = uiElements[index+2]
+                val topFilters = uiElements[uiElements.size - 2]
                 val newFilters = uiElements[uiElements.size - 1]
 
                 // sort the weapons list by text if not empty
@@ -288,11 +290,12 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
                         ReflectionUtils.rawInvoke(method, weaponsList, weapon.first)
                     }
                 }
-
+                existingFilters.position.setYAlignOffset(-32f)
+                topFilters.position.aboveLeft(existingFilters, 0f)
                 newFilters.position.belowLeft(existingFilters, 0f)
                 weaponsList.position.belowLeft(newFilters, 4f)
-                if(eitherNoWeaponsOrNewFilters != newFilters){
-                    eitherNoWeaponsOrNewFilters.position.belowLeft(newFilters, 0f)
+                if(eitherNoWeaponsOrTopFilters != topFilters){
+                    eitherNoWeaponsOrTopFilters.position.aboveLeft(existingFilters, 0f)
                 }
                 break
             }
@@ -383,7 +386,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             updateIcon(DamageType.FRAGMENTATION, fragIcon.getSprite(), fragButton)
 
             rangeSlider.setLevelsTo(0f, 1f)
-            searchBox.text = ""
+            searchBox.setText("")
             resetButton.isChecked = true
 
             ModPlugin.beamActive = true
@@ -454,8 +457,8 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             filtersChanged = true
         }
 
-        if(ModPlugin.currentSearch != searchBox.text){
-            ModPlugin.currentSearch = searchBox.text
+        if(ModPlugin.currentSearch != searchBox.getText()){
+            ModPlugin.currentSearch = searchBox.getText()
             filtersChanged = true
         }
 
