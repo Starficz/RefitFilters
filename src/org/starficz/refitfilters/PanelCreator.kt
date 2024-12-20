@@ -54,9 +54,12 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
 
     val width = 300f
     val height = 79f
+    val topPanelHeight = 27f
+
+    var pickerYPos = Float.POSITIVE_INFINITY
+    var startingYOffset = 0f
 
     fun init() : CustomPanelAPI {
-        var topPanelHeight = 27f
         newFiltersPanel = Global.getSettings().createCustom(width, height-topPanelHeight, null)
         val mainElement = newFiltersPanel.createUIElement(width, height-topPanelHeight, false)
         newFiltersPanel.addUIElement(mainElement)
@@ -69,6 +72,8 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
                 updateFilterValues()
             }
         }
+
+
 
         mainElement.setAreaCheckboxFont("graphics/fonts/victor14.fnt")
 
@@ -193,6 +198,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         }
 
         filterWeapons()
+
         return newFiltersPanel
     }
 
@@ -331,6 +337,17 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         val noCurrentWeaponPad = if(index == 0) 9f else 0f
         ReflectionUtils.set(heightField, weaponPickerDialog, pickerHeight + height + noCurrentWeaponPad)
         ReflectionUtils.invoke("setSize", weaponPickerDialog, pickerWidth, pickerHeight + height + noCurrentWeaponPad)
+        resetPickerHeight()
+    }
+
+    fun resetPickerHeight(){
+        if(weaponPickerDialog.position.y-pickerYPos < 0){
+            pickerYPos = weaponPickerDialog.position.y
+            startingYOffset = ReflectionUtils.invoke("getYAlignOffset", weaponPickerDialog.position) as Float
+        }
+        if(pickerYPos != weaponPickerDialog.position.y){
+            weaponPickerDialog.position.setYAlignOffset(startingYOffset+(weaponPickerDialog.position.y-pickerYPos))
+        }
     }
 
     fun revertRestrictedTags(){
@@ -478,7 +495,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
                 button.isChecked = true
                 continue
             }
-            if(!(Keyboard.isKeyDown(42) && Keyboard.isKeyDown(29))){
+            if(!(Keyboard.isKeyDown(42) || Keyboard.isKeyDown(29))){
                 if(button == clicked) button.isChecked = true
                 else button.isChecked = false
             }
