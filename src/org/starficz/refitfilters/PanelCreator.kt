@@ -189,6 +189,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         searchBox = SearchField(topElement, 251f, 25f, ModPlugin.currentSearch).apply {
             position.rightOfMid(resetButton, 1f)
             renderBorder = false
+            backgroundColor = Misc.getDarkPlayerColor().darker()
         }
 
         filterWeapons()
@@ -295,7 +296,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
                 newFilters.position.belowLeft(existingFilters, 0f)
                 weaponsList.position.belowLeft(newFilters, 4f)
                 if(eitherNoWeaponsOrTopFilters != topFilters){
-                    eitherNoWeaponsOrTopFilters.position.aboveLeft(existingFilters, 0f)
+                    eitherNoWeaponsOrTopFilters.position.belowLeft(newFilters, 0f)
                 }
                 break
             }
@@ -327,8 +328,9 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             throw Exception("Unable to differentiate weaponPickerDialog's obf fields")
         }
 
-        ReflectionUtils.set(heightField, weaponPickerDialog, pickerHeight + height)
-        ReflectionUtils.invoke("setSize", weaponPickerDialog, pickerWidth, pickerHeight + height)
+        val noCurrentWeaponPad = if(index == 0) 9f else 0f
+        ReflectionUtils.set(heightField, weaponPickerDialog, pickerHeight + height + noCurrentWeaponPad)
+        ReflectionUtils.invoke("setSize", weaponPickerDialog, pickerWidth, pickerHeight + height + noCurrentWeaponPad)
     }
 
     fun revertRestrictedTags(){
