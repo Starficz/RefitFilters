@@ -1,4 +1,5 @@
 Version 2.0.0
+- NOT SAVE COMPATIBLE WITH 1.X.X
 - Rewrote entire mod, now works off of the UI directly in the refit weapon panel
 
 Version 1.1.1

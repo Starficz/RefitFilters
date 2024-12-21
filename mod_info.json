@@ -2,7 +2,7 @@
     "id": "refitfilters",
     "name": "Refit Filters",
     "author": "Starficz",
-    "utility": "false",
+    "utility": "true",
     "version": "2.0.0",
     "description": "Adds additional filters to the refit weapon picker.",
     "gameVersion": "0.97a-RC11",
