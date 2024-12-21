@@ -21,7 +21,6 @@ import java.lang.Math.round
 class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: Boolean) {
     val weaponListClass = ReflectionUtils.findFieldWithMethodName(weaponPickerDialog, "getScroller")!!.get(weaponPickerDialog)!!.javaClass
 
-    var restrictedWeaponsID: Set<String> = HashSet()
     lateinit var newFiltersPanel: CustomPanelAPI
     lateinit var topFiltersPanel: CustomPanelAPI
 
@@ -191,7 +190,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             borderColor = Misc.getHighlightColor().darker()
         }
         mainElement.addTooltip(rangeSlider.elementPanel, TooltipMakerAPI.TooltipLocation.ABOVE, 450f) {
-                tooltip -> tooltip.addPara("Filters out based on their non-modified range. Press anywhere within the slider to move the nearest point. Setting the maximum to 1500 makes the upper limit infinite.", 0f,
+                tooltip -> tooltip.addPara("Filters out based on their non-modified range. Click anywhere within the slider to move the nearest point. Setting the maximum to 1500 makes the upper limit infinite.", 0f,
                     Misc.getTextColor(), Misc.getHighlightColor(), "1500") }
 
         topFiltersPanel = Global.getSettings().createCustom(width, topPanelHeight, null)
@@ -467,6 +466,8 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
                 filtersChanged = true
             }
         }
+
+        resetButton.isChecked = true
 
         // handle click logic for dual beam/projectile
         if(beamButton.isChecked != ModPlugin.beamActive){

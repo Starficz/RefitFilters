@@ -123,7 +123,7 @@ class SearchField(tooltip: TooltipMakerAPI, width: Float, height: Float, private
                     break
                 }
 
-                if (event.isCtrlDown || event.isAltDown){
+                if (event.isCtrlDown || event.isAltDown || event.eventValue in (2..11)){
                     break
                 }
 
