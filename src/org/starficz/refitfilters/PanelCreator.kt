@@ -196,6 +196,8 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
     }
 
     fun filterWeapons(){
+        //reloadWeaponPicker()
+
         if(openedFromCampaign){
             filterCargos()
         } else{
@@ -241,6 +243,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
 
         var index = 0
         val uiElements = innerWeaponPanel.getChildrenCopy()
+        var shownWeapons = 0
         for(uiElement in uiElements){
             if (ReflectionUtils.hasMethodOfName("addItem", uiElement)){
                 val existingFilters = uiElements[index]
@@ -249,47 +252,48 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
                 val topFilters = uiElements[uiElements.size - 2]
                 val newFilters = uiElements[uiElements.size - 1]
 
-                // sort the weapons list by text if not empty
-                if(ModPlugin.currentSearch.isNotEmpty()){
-                    // get the weapon UI list
-                    val individualWeapons = (ReflectionUtils.invoke("getItems", weaponsList) as List<*>).toMutableList()
+                // get the weapon UI list
+                val individualWeapons = (ReflectionUtils.invoke("getItems", weaponsList) as List<*>).toMutableList()
 
-                    // map each weapon spec onto their UIpanel
-                    val weaponSpecPairs = individualWeapons.mapNotNull { weapon ->
-                        val weaponTooltip = ReflectionUtils.invoke("getTooltip", weapon!!)!!
+                // map each weapon spec onto their UIpanel
+                val weaponSpecPairs = individualWeapons.mapNotNull { weapon ->
+                    val weaponTooltip = ReflectionUtils.invoke("getTooltip", weapon!!)!!
 
-                        val weaponSpecField = ReflectionUtils.getFieldsOfType(weaponTooltip, BaseWeaponSpec::class.java)
-                        if (weaponSpecField.size != 1) throw Exception("Unable to differentiate weaponTooltip's obfuscated weaponSpec field")
+                    val weaponSpecField = ReflectionUtils.getFieldsOfType(weaponTooltip, BaseWeaponSpec::class.java)
+                    if (weaponSpecField.size != 1) throw Exception("Unable to differentiate weaponTooltip's obfuscated weaponSpec field")
 
-                        val weaponSpec = ReflectionUtils.get(weaponSpecField[0], weaponTooltip) as WeaponSpecAPI
+                    val weaponSpec = ReflectionUtils.get(weaponSpecField[0], weaponTooltip) as WeaponSpecAPI
 
-                        weapon to weaponSpec
-                    }
-
-                    // sort the weapons by fuzzy search score
-                    val sortedWeaponSpecPairs = weaponSpecPairs.sortedWith(
-                        compareByDescending (
-                            {FuzzySearch.fuzzyMatch(ModPlugin.currentSearch, it.second.weaponName).second}
-                        )
-                    )
-
-                    // clear the weapons list
-                    ReflectionUtils.invoke("clear", weaponsList)
-
-                    // getting the correct classes to reinsert all the weaponUI's int the parent scroller panel
-                    val argumentsList = ReflectionUtils.getMethodArguments("addItem", weaponListClass)
-                    var correctArguments: Array<Class<*>>? = null
-                    for(arguments in argumentsList){
-                        if (arguments.size == 1) correctArguments = arguments
-                    }
-                    val method = weaponListClass.getMethod("addItem", *correctArguments!!)
-
-                    for(weapon in sortedWeaponSpecPairs){
-                        //(weaponsList as com.fs.starfarer.coreui.w).addItem(weapon.first as com.fs.starfarer.ui.b)
-
-                        ReflectionUtils.rawInvoke(method, weaponsList, weapon.first)
-                    }
+                    weapon to weaponSpec
                 }
+
+
+                // sort the weapons by fuzzy search score
+                val sortedWeaponSpecPairs = weaponSpecPairs.filter{ !weaponFiltered(it.second) }.sortedWith(
+                    compareByDescending (
+                        {FuzzySearch.fuzzyMatch(ModPlugin.currentSearch, it.second.weaponName).second}
+                    )
+                )
+
+                // clear the weapons list
+                ReflectionUtils.invoke("clear", weaponsList)
+
+                // getting the correct classes to reinsert all the weaponUI's int the parent scroller panel
+                val argumentsList = ReflectionUtils.getMethodArguments("addItem", weaponListClass)
+                var correctArguments: Array<Class<*>>? = null
+                for(arguments in argumentsList){
+                    if (arguments.size == 1) correctArguments = arguments
+                }
+                val method = weaponListClass.getMethod("addItem", *correctArguments!!)
+
+                for(weapon in sortedWeaponSpecPairs){
+                    //(weaponsList as com.fs.starfarer.coreui.w).addItem(weapon.first as com.fs.starfarer.ui.b)
+
+                    ReflectionUtils.rawInvoke(method, weaponsList, weapon.first)
+                }
+
+                shownWeapons = sortedWeaponSpecPairs.size
+
                 existingFilters.position.setYAlignOffset(-32f)
                 topFilters.position.aboveLeft(existingFilters, 0f)
                 newFilters.position.belowLeft(existingFilters, 0f)
@@ -301,6 +305,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             }
             index += 1
         }
+
 
         val knownFloats = listOf("PAD", "ITEM_WIDTH", "ITEM_HEIGHT", "origXAlignOffset")
         val knownWidths = listOf(382.0f, 385.0f)
@@ -325,6 +330,12 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         }
         if(heightField == null || pickerHeight == null || pickerWidth == null) {
             throw Exception("Unable to differentiate weaponPickerDialog's obf fields")
+        }
+
+        val weaponPickerHeight = when(shownWeapons){
+            0 -> 1
+            1 -> 1
+            else -> 1
         }
 
         ReflectionUtils.set(heightField, weaponPickerDialog, pickerHeight + height)
