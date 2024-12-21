@@ -1,15 +1,14 @@
 package org.starficz.refitfilters
 
 import com.fs.starfarer.api.Global
-import com.fs.starfarer.api.campaign.CargoAPI
 import com.fs.starfarer.api.combat.DamageType
 import com.fs.starfarer.api.combat.WeaponAPI
 import com.fs.starfarer.api.graphics.SpriteAPI
-import com.fs.starfarer.api.impl.campaign.ids.Tags
 import com.fs.starfarer.api.loading.WeaponSpecAPI
 import com.fs.starfarer.api.ui.*
 import com.fs.starfarer.api.util.Misc
 import com.fs.starfarer.loading.specs.BaseWeaponSpec
+import com.fs.starfarer.settings.StarfarerSettings
 import lunalib.backend.ui.components.util.TooltipHelper
 import lunalib.lunaExtensions.addLunaElement
 import lunalib.lunaExtensions.addLunaSpriteElement
@@ -52,7 +51,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
     val energyColor = Color(125, 194, 255)
     val fragColor = Color(255, 255, 131)
 
-    val width = 300f
+    val width = 382f
     val height = 79f
     val topPanelHeight = 27f
 
@@ -77,7 +76,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
 
         mainElement.setAreaCheckboxFont("graphics/fonts/victor14.fnt")
 
-        val standardColor = Global.getSettings().brightPlayerColor
+        val standardColor = Global.getSettings().basePlayerColor
 
         projectileButton = mainElement.addAreaCheckbox("PROJECTILE", null, standardColor.darker(), standardColor.darker().darker().darker(), standardColor, 93f, 25f, 0f).apply {
             isChecked = ModPlugin.projectileActive
@@ -202,45 +201,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         return newFiltersPanel
     }
 
-    fun filterWeapons(){
-        //reloadWeaponPicker()
-
-        if(openedFromCampaign){
-            filterCargos()
-        } else{
-            cacheAllRestrictedWeaponID()
-            filterByAddingRestrictedTags()
-            reloadWeaponPicker()
-            revertRestrictedTags()
-        }
-    }
-
-    fun filterCargos(){
-        val playerCargo = Global.getSector().playerFleet.cargo
-        val cargos = ModPlugin.currentEntityCargos
-
-        val originalCargoMap = mutableMapOf<CargoAPI, CargoAPI>()
-        originalCargoMap[playerCargo] = playerCargo.createCopy()
-        for(cargo in cargos){
-            originalCargoMap[cargo] = cargo.createCopy()
-        }
-
-        for(cargo in originalCargoMap){
-            for(weaponStack in cargo.key.weapons){
-                val spec = Global.getSettings().getWeaponSpec(weaponStack.item)
-                if(weaponFiltered(spec)) cargo.key.removeWeapons(weaponStack.item, weaponStack.count)
-            }
-        }
-
-        reloadWeaponPicker()
-
-        for(cargo in originalCargoMap){
-            cargo.key.clear()
-            cargo.key.addAll(cargo.value)
-        }
-    }
-
-    fun reloadWeaponPicker() {
+    fun filterWeapons() {
         ReflectionUtils.invoke("notifyFilterChanged", weaponPickerDialog) //Refresh the WeaponPickerDialog
 
         // shift weapons down
@@ -248,69 +209,87 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         innerWeaponPanel.addComponent(topFiltersPanel)
         innerWeaponPanel.addComponent(newFiltersPanel)
 
+
         var index = 0
         val uiElements = innerWeaponPanel.getChildrenCopy()
-        var shownWeapons = 0
+
         for(uiElement in uiElements){
             if (ReflectionUtils.hasMethodOfName("addItem", uiElement)){
-                val existingFilters = uiElements[index]
-                val weaponsList = uiElements[index+1]
-                val eitherNoWeaponsOrTopFilters = uiElements[index+2]
-                val topFilters = uiElements[uiElements.size - 2]
-                val newFilters = uiElements[uiElements.size - 1]
-
-                // get the weapon UI list
-                val individualWeapons = (ReflectionUtils.invoke("getItems", weaponsList) as List<*>).toMutableList()
-
-                // map each weapon spec onto their UIpanel
-                val weaponSpecPairs = individualWeapons.mapNotNull { weapon ->
-                    val weaponTooltip = ReflectionUtils.invoke("getTooltip", weapon!!)!!
-
-                    val weaponSpecField = ReflectionUtils.getFieldsOfType(weaponTooltip, BaseWeaponSpec::class.java)
-                    if (weaponSpecField.size != 1) throw Exception("Unable to differentiate weaponTooltip's obfuscated weaponSpec field")
-
-                    val weaponSpec = ReflectionUtils.get(weaponSpecField[0], weaponTooltip) as WeaponSpecAPI
-
-                    weapon to weaponSpec
-                }
-
-
-                // sort the weapons by fuzzy search score
-                val sortedWeaponSpecPairs = weaponSpecPairs.filter{ !weaponFiltered(it.second) }.sortedWith(
-                    compareByDescending (
-                        {FuzzySearch.fuzzyMatch(ModPlugin.currentSearch, it.second.weaponName).second}
-                    )
-                )
-
-                // clear the weapons list
-                ReflectionUtils.invoke("clear", weaponsList)
-
-                // getting the correct classes to reinsert all the weaponUI's int the parent scroller panel
-                val argumentsList = ReflectionUtils.getMethodArguments("addItem", weaponListClass)
-                var correctArguments: Array<Class<*>>? = null
-                for(arguments in argumentsList){
-                    if (arguments.size == 1) correctArguments = arguments
-                }
-                val method = weaponListClass.getMethod("addItem", *correctArguments!!)
-
-                for(weapon in sortedWeaponSpecPairs){
-                    //(weaponsList as com.fs.starfarer.coreui.w).addItem(weapon.first as com.fs.starfarer.ui.b)
-
-                    ReflectionUtils.rawInvoke(method, weaponsList, weapon.first)
-                }
-
-                shownWeapons = sortedWeaponSpecPairs.size
-
-                existingFilters.position.setYAlignOffset(-32f)
-                topFilters.position.aboveLeft(existingFilters, 0f)
-                newFilters.position.belowLeft(existingFilters, 0f)
-                weaponsList.position.belowLeft(newFilters, 4f)
-                if(eitherNoWeaponsOrTopFilters != topFilters){
-                    eitherNoWeaponsOrTopFilters.position.belowLeft(newFilters, 0f)
-                }
                 break
             }
             index += 1
+        }
+
+        val existingFilters = uiElements[index]
+        val weaponsList = uiElements[index+1]
+        val eitherNoWeaponsOrTopFilters = uiElements[index+2]
+        val topFilters = uiElements[uiElements.size - 2]
+        val newFilters = uiElements[uiElements.size - 1]
+
+        // get the weapon UI list
+        val individualWeapons = (ReflectionUtils.invoke("getItems", weaponsList) as List<*>).toMutableList()
+
+        // map each weapon spec onto their UIpanel
+        val weaponSpecPairs = individualWeapons.mapNotNull { weapon ->
+            val weaponTooltip = ReflectionUtils.invoke("getTooltip", weapon!!)!!
+
+            val weaponSpecField = ReflectionUtils.getFieldsOfType(weaponTooltip, BaseWeaponSpec::class.java)
+            if (weaponSpecField.size != 1) throw Exception("Unable to differentiate weaponTooltip's obfuscated weaponSpec field")
+
+            val weaponSpec = ReflectionUtils.get(weaponSpecField[0], weaponTooltip) as WeaponSpecAPI
+
+            weapon to weaponSpec
+        }
+
+
+        // filter out the list with the added filters, sort the weapons by fuzzy search score
+        val sortedWeaponSpecPairs = weaponSpecPairs.filter{ !weaponFiltered(it.second) }.sortedWith(
+            compareByDescending (
+                {FuzzySearch.fuzzyMatch(ModPlugin.currentSearch, it.second.weaponName).second}
+            )
+        )
+
+        // clear the weapons list
+        ReflectionUtils.invoke("clear", weaponsList)
+
+        // getting the correct classes to reinsert all the weaponUI's int the parent scroller panel
+        val argumentsList = ReflectionUtils.getMethodArguments("addItem", weaponListClass)
+        var correctArguments: Array<Class<*>>? = null
+        for(arguments in argumentsList){
+            if (arguments.size == 1) correctArguments = arguments
+        }
+        val method = weaponListClass.getMethod("addItem", *correctArguments!!)
+
+        for(weapon in sortedWeaponSpecPairs){
+            //(weaponsList as com.fs.starfarer.coreui.w).addItem(weapon.first as com.fs.starfarer.ui.b)
+
+            ReflectionUtils.rawInvoke(method, weaponsList, weapon.first)
+        }
+
+        existingFilters.position.setYAlignOffset(-32f)
+        topFilters.position.aboveLeft(existingFilters, 0f)
+        newFilters.position.belowLeft(existingFilters, 0f)
+        weaponsList.position.belowLeft(newFilters, 4f)
+
+
+        if(eitherNoWeaponsOrTopFilters != topFilters){
+            eitherNoWeaponsOrTopFilters.position.belowLeft(newFilters, 0f)
+        } else if (sortedWeaponSpecPairs.size == 0){
+            val noWeaponsPanel = Global.getSettings().createCustom(width, 78f, null)
+            val noWeaponsElement = noWeaponsPanel.createUIElement(width, 78f, false)
+            noWeaponsElement.position.inMid()
+
+            noWeaponsElement.addLunaElement(width, 78f).apply {
+                addText("No weapons matching filter", Misc.getBasePlayerColor())
+                renderBorder = false
+                renderBackground = false
+                centerText()
+                position.setXAlignOffset(1f)
+            }
+
+            noWeaponsPanel.addUIElement(noWeaponsElement)
+            innerWeaponPanel.addComponent(noWeaponsPanel)
+            noWeaponsPanel.position.belowLeft(newFilters, 0f)
         }
 
 
@@ -339,15 +318,16 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             throw Exception("Unable to differentiate weaponPickerDialog's obf fields")
         }
 
-        val weaponPickerHeight = when(shownWeapons){
-            0 -> 1
-            1 -> 1
-            else -> 1
+        val weaponPickerHeight = when{
+            sortedWeaponSpecPairs.size <= 1 -> 234f
+            sortedWeaponSpecPairs.size >= 1 && sortedWeaponSpecPairs.size <= 6 -> 156f + (78f * sortedWeaponSpecPairs.size)
+            else -> 624f
         }
 
-        val noCurrentWeaponPad = if(index == 0) 9f else 0f
-        ReflectionUtils.set(heightField, weaponPickerDialog, pickerHeight + height + noCurrentWeaponPad)
-        ReflectionUtils.invoke("setSize", weaponPickerDialog, pickerWidth, pickerHeight + height + noCurrentWeaponPad)
+        val noCurrentWeaponPad = if(index == 0) 95f else 0f
+        val extraWeaponPad = if(index == 0 && sortedWeaponSpecPairs.size >= 7) 78f else 0f
+        ReflectionUtils.set(heightField, weaponPickerDialog, weaponPickerHeight + height - noCurrentWeaponPad + extraWeaponPad)
+        ReflectionUtils.invoke("setSize", weaponPickerDialog, pickerWidth, weaponPickerHeight + height - noCurrentWeaponPad + extraWeaponPad)
         resetPickerHeight()
     }
 
@@ -358,18 +338,6 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         }
         if(pickerYPos != weaponPickerDialog.position.y){
             weaponPickerDialog.position.setYAlignOffset(startingYOffset+(weaponPickerDialog.position.y-pickerYPos))
-        }
-    }
-
-    fun revertRestrictedTags(){
-        for(spec in Global.getSettings().getAllWeaponSpecs()){
-            if(Tags.RESTRICTED in spec.tags && spec.weaponId !in restrictedWeaponsID) spec.tags.remove(Tags.RESTRICTED)
-        }
-    }
-
-    fun filterByAddingRestrictedTags(){
-        for(spec in Global.getSettings().getAllWeaponSpecs()){
-            if(Tags.RESTRICTED !in spec.tags && weaponFiltered(spec)) spec.addTag(Tags.RESTRICTED)
         }
     }
 
@@ -391,10 +359,6 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         return false
     }
 
-    fun cacheAllRestrictedWeaponID(){
-        val restrictedWeps = Global.getSettings().allWeaponSpecs.filter { Tags.RESTRICTED in it.tags }
-        restrictedWeaponsID = restrictedWeps.map { it.weaponId }.toSet()
-    }
 
     fun updateFilterValues(){
 
