@@ -72,8 +72,6 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             }
         }
 
-
-
         mainElement.setAreaCheckboxFont("graphics/fonts/victor14.fnt")
 
         val standardColor = Global.getSettings().basePlayerColor
@@ -170,11 +168,12 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         val rangeLabel = mainElement.addPara("RANGE", 1f)
         rangeLabel.position.rightOfMid(fragButton, 6f)
 
-        rangeSlider = RangeSlider(mainElement, 200f, 25f, ModPlugin.lowerRange.toFloat(), ModPlugin.upperRange.toFloat(), ModPlugin.minRange.toFloat(), ModPlugin.maxRange.toFloat()).apply {
+        rangeSlider = RangeSlider(mainElement, 200f, 30f, ModPlugin.lowerRange.toFloat(), ModPlugin.upperRange.toFloat(), ModPlugin.minRange.toFloat(), ModPlugin.maxRange.toFloat()).apply {
             position.rightOfTop(fragButton, 55f)
             backgroundColor = Misc.getHighlightColor().darker().darker().darker()
             borderColor = Misc.getHighlightColor().darker()
         }
+        mainElement.addTooltipToPrevious(TooltipHelper("Shows highlighted range. 1500 displays up to infinity.", 350f), TooltipMakerAPI.TooltipLocation.ABOVE)
 
         topFiltersPanel = Global.getSettings().createCustom(width, topPanelHeight, null)
         val topElement = topFiltersPanel.createUIElement(width, topPanelHeight, false)
@@ -188,13 +187,15 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             //position.belowLeft(projectileButton, 1f)
             position.setXAlignOffset(0f)
         }
-        topElement.addTooltipToPrevious(TooltipHelper("Reset all filters.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        topElement.addTooltipToPrevious(TooltipHelper("Reset all filters. CTRL+R Hotkey.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
 
         searchBox = SearchField(topElement, 251f, 25f, ModPlugin.currentSearch).apply {
             position.rightOfMid(resetButton, 1f)
             renderBorder = false
             backgroundColor = Misc.getDarkPlayerColor().darker()
+            backgroundAlpha = 0.7f
         }
+        topElement.addTooltipToPrevious(TooltipHelper("Sorts results by search text. Esc to clear.\nDoes not exclude unmatched results.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
 
         filterWeapons()
 
@@ -362,41 +363,50 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
 
     fun updateFilterValues(){
 
-        // reset everything
-        if(!resetButton.isChecked){
-            beamButton.isChecked = true
-            projectileButton.isChecked = true
-            pdButton.isChecked = true
-            nonpdButton.isChecked = true
+        var filtersChanged = false
 
-            kineticButton.isChecked = true
-            heButton.isChecked = true
-            energyButton.isChecked = true
-            fragButton.isChecked = true
+        // reset everything if needed
 
-            updateIcon(DamageType.KINETIC, keIcon.getSprite(), kineticButton)
-            updateIcon(DamageType.HIGH_EXPLOSIVE, heIcon.getSprite(), heButton)
-            updateIcon(DamageType.ENERGY, energyIcon.getSprite(), energyButton)
-            updateIcon(DamageType.FRAGMENTATION, fragIcon.getSprite(), fragButton)
+        if(ModPlugin.beamActive != true || ModPlugin.projectileActive != true || ModPlugin.pdActive != true || ModPlugin.nonpdActive != true ||
+            ModPlugin.kineticActive != true || ModPlugin.heActive != true || ModPlugin.energyActive != true || ModPlugin.fragActive != true ||
+            ModPlugin.lowerRange != ModPlugin.minRange || ModPlugin.upperRange != ModPlugin.maxRange || ModPlugin.currentSearch != ""){
 
-            rangeSlider.setLevelsTo(0f, 1f)
-            searchBox.setText("")
-            resetButton.isChecked = true
+            if(!resetButton.isChecked || (Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) && Keyboard.isKeyDown(Keyboard.KEY_R))){
+                beamButton.isChecked = true
+                projectileButton.isChecked = true
+                pdButton.isChecked = true
+                nonpdButton.isChecked = true
 
-            ModPlugin.beamActive = true
-            ModPlugin.projectileActive = true
-            ModPlugin.pdActive = true
-            ModPlugin.nonpdActive = true
-            ModPlugin.kineticActive = true
-            ModPlugin.heActive = true
-            ModPlugin.energyActive = true
-            ModPlugin.fragActive = true
-            ModPlugin.lowerRange = ModPlugin.minRange
-            ModPlugin.upperRange = ModPlugin.maxRange
-            ModPlugin.currentSearch = ""
+                kineticButton.isChecked = true
+                heButton.isChecked = true
+                energyButton.isChecked = true
+                fragButton.isChecked = true
 
-            filterWeapons()
-            return
+                updateIcon(DamageType.KINETIC, keIcon.getSprite(), kineticButton)
+                updateIcon(DamageType.HIGH_EXPLOSIVE, heIcon.getSprite(), heButton)
+                updateIcon(DamageType.ENERGY, energyIcon.getSprite(), energyButton)
+                updateIcon(DamageType.FRAGMENTATION, fragIcon.getSprite(), fragButton)
+
+                rangeSlider.setLevelsTo(0f, 1f)
+                searchBox.setText("")
+                resetButton.isChecked = true
+
+                ModPlugin.beamActive = true
+                ModPlugin.projectileActive = true
+                ModPlugin.pdActive = true
+                ModPlugin.nonpdActive = true
+                ModPlugin.kineticActive = true
+                ModPlugin.heActive = true
+                ModPlugin.energyActive = true
+                ModPlugin.fragActive = true
+                ModPlugin.lowerRange = ModPlugin.minRange
+                ModPlugin.upperRange = ModPlugin.maxRange
+                ModPlugin.currentSearch = ""
+
+                Global.getSoundPlayer().playUISound("ui_button_pressed", 1f, 1f)
+
+                filtersChanged = true
+            }
         }
 
         // handle click logic for dual beam/projectile
@@ -432,7 +442,6 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
         )
 
         // map buttons to backend filters
-        var filtersChanged = false
         buttonMappings.forEach { (button, property) ->
             val currentValue = property().get()
             if (currentValue != button.isChecked) {
@@ -470,7 +479,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
                 button.isChecked = true
                 continue
             }
-            if(!(Keyboard.isKeyDown(42) || Keyboard.isKeyDown(29))){
+            if(!(Keyboard.isKeyDown(Keyboard.KEY_LSHIFT) || Keyboard.isKeyDown(Keyboard.KEY_LCONTROL))){
                 if(button == clicked) button.isChecked = true
                 else button.isChecked = false
             }

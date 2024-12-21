@@ -15,8 +15,9 @@ class RangeSlider(tooltip: TooltipMakerAPI, width: Float, height: Float, var val
 
     val sliderNodeWidth = 2f
     val tickWidth = 1f
-    val tickHeight = 0.3f
+    val tickHeight = 7f
     val tickIncrements = generateSequence(minValue) { it + increment }.takeWhile { it <= maxValue }.map { (it - minValue) / (maxValue - minValue) }.toList()
+    val barYPad = 5f
 
     var levelA = linMap(0f,1f, minValue, maxValue, valueA)
     var levelB = linMap(0f,1f, minValue, maxValue, valueB)
@@ -116,11 +117,11 @@ class RangeSlider(tooltip: TooltipMakerAPI, width: Float, height: Float, var val
             color.green / 255f,
             color.blue / 255f,
             color.alpha / 255f * (alphaMult * backgroundAlpha))
-        GL11.glRectf(x + tickWidth, y + height * 0.05f , x + width - tickWidth, y + height * 0.10f)
+        GL11.glRectf(x + tickWidth, y + barYPad, x + width - tickWidth, y + barYPad + tickWidth*2)
 
         // tick marks
         for (tickPos in tickIncrements){
-            GL11.glRectf(x + (width-tickWidth*4) * tickPos+tickWidth, y + height * 0.05f , x + (width-tickWidth*4) * tickPos+tickWidth*3, y + height * tickHeight)
+            GL11.glRectf(x + (width-tickWidth*4) * tickPos+tickWidth, y + barYPad , x + (width-tickWidth*4) * tickPos+tickWidth*3, y + barYPad + tickHeight)
         }
 
         val min = position.centerX - width / 2
@@ -133,7 +134,7 @@ class RangeSlider(tooltip: TooltipMakerAPI, width: Float, height: Float, var val
             color.green / 255f,
             color.blue / 255f,
             color.alpha / 255f * (alphaMult * backgroundAlpha))
-        GL11.glRectf(min(nodeAPos, nodeBPos), y + height * 0.05f , max(nodeAPos, nodeBPos), y + height * 0.10f)
+        GL11.glRectf(min(nodeAPos, nodeBPos), y + barYPad, max(nodeAPos, nodeBPos), y + barYPad + tickWidth*2)
 
         GL11.glPopMatrix()
     }
@@ -157,7 +158,7 @@ class RangeSlider(tooltip: TooltipMakerAPI, width: Float, height: Float, var val
             nodeAColor.alpha / 255f * (alphaMult * backgroundAlpha))
 
         val nodeAPos = Misc.interpolate(min, max, levelA)
-        GL11.glRectf(nodeAPos - sliderNodeWidth, y , nodeAPos + sliderNodeWidth, y + sliderNodeWidth*2)
+        GL11.glRectf(nodeAPos - sliderNodeWidth, y + barYPad-1 , nodeAPos + sliderNodeWidth, y + barYPad + sliderNodeWidth*2-1)
 
         val nodeBColor = if(nodeBHovered) nodeColor.brighter() else nodeColor
         GL11.glColor4f(nodeBColor.red / 255f,
@@ -166,7 +167,7 @@ class RangeSlider(tooltip: TooltipMakerAPI, width: Float, height: Float, var val
             nodeBColor.alpha / 255f * (alphaMult * backgroundAlpha))
 
         val nodeBPos = Misc.interpolate(min, max, levelB)
-        GL11.glRectf(nodeBPos - sliderNodeWidth, y , nodeBPos + sliderNodeWidth, y + sliderNodeWidth*2)
+        GL11.glRectf(nodeBPos - sliderNodeWidth, y + barYPad-1 , nodeBPos + sliderNodeWidth, y + barYPad + sliderNodeWidth*2-1)
 
         GL11.glPopMatrix()
     }
