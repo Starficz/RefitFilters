@@ -1,12 +1,12 @@
 {
     "masterVersionFile": "https://raw.githubusercontent.com/Starficz/RefitFilters/main/refitfilters.version",
     "modName": "Refit Filters",
-    "directDownloadURL": "https://github.com/Starficz/RefitFilters/releases/download/1.1.1/RefitFilters.zip",
+    "directDownloadURL": "https://github.com/Starficz/RefitFilters/releases/latest/download/RefitFilters.zip",
     "changelogURL": "https://raw.githubusercontent.com/Starficz/RefitFilters/main/CHANGELOGS.md",
     "modVersion":
         {
-            "major": "1",
-            "minor": "1",
-            "patch": "1"
+            "major": "2",
+            "minor": "0",
+            "patch": "0"
         }
 }
