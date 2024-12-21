@@ -14,6 +14,7 @@ import lunalib.lunaExtensions.addLunaElement
 import lunalib.lunaExtensions.addLunaSpriteElement
 import lunalib.lunaUI.elements.LunaSpriteElement
 import org.lwjgl.input.Keyboard
+import org.lwjgl.input.Mouse
 import java.awt.Color
 import java.lang.Math.round
 
@@ -205,7 +206,9 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             //position.belowLeft(projectileButton, 1f)
             position.setXAlignOffset(0f)
         }
-        mainElement.addTooltip(resetButton, TooltipMakerAPI.TooltipLocation.ABOVE, 300f) { tooltip -> tooltip.addPara("Reset all filters. CTRL+R Hotkey.", 0f) }
+        mainElement.addTooltip(resetButton, TooltipMakerAPI.TooltipLocation.ABOVE, 300f)
+        { tooltip -> tooltip.addPara("Reset all filters. You can also press CTRL + R or the Middle Mouse Button to do the same.",
+            0f, Misc.getTextColor(), Misc.getHighlightColor(), "CTRL + R", "Middle Mouse Button") }
 
         searchBox = SearchField(topElement, 251f, 25f, ModPlugin.currentSearch).apply {
             position.rightOfMid(resetButton, 1f)
@@ -227,7 +230,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
                     0f, Misc.getTextColor(), Misc.getHighlightColor(), "ESC", "Shift + Backspace", "x")
 
                 tooltip.addSpacer(10f)
-                tooltip.addPara("Sort - Sort the searchbar based on the best match. $sortExtra", 0f, Misc.getTextColor(), Misc.getHighlightColor(), "Sort", "x")
+                tooltip.addPara("Sort - Sort the list based on the best match. $sortExtra", 0f, Misc.getTextColor(), Misc.getHighlightColor(), "Sort", "x")
                 tooltip.addPara("Filter - Remove entries that do not match the prompt enough. $filterExtra", 0f, Misc.getTextColor(), Misc.getHighlightColor(), "Filter", "x")
                 tooltip.addPara("Sort & Filter - Combined behaviour of the above. $sortAndFilterExtra", 0f, Misc.getTextColor(), Misc.getHighlightColor(), "Sort & Filter", "x")
 
@@ -427,7 +430,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             ModPlugin.kineticActive != true || ModPlugin.heActive != true || ModPlugin.energyActive != true || ModPlugin.fragActive != true ||
             ModPlugin.lowerRange != ModPlugin.minRange || ModPlugin.upperRange != ModPlugin.maxRange || ModPlugin.currentSearch != ""){
 
-            if(!resetButton.isChecked || (Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) && Keyboard.isKeyDown(Keyboard.KEY_R))){
+            if(!resetButton.isChecked || (Keyboard.isKeyDown(Keyboard.KEY_LCONTROL) && Keyboard.isKeyDown(Keyboard.KEY_R)) || Mouse.isButtonDown(2) ){
                 beamButton.isChecked = true
                 projectileButton.isChecked = true
                 pdButton.isChecked = true

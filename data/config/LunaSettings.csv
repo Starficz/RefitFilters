@@ -3,8 +3,8 @@ refitfilters_header,Configurations,Header,Configurations,,,,,
 refitfilters_searchbarBehaviour,Searchbar behaviour,Radio,Sort,"Sort, Filter, Sort & Filter","Select the behaviour of the searchbar.
 
 
-[Sort] - Sort the Searchbar based on what matches the result the best.
-[Filter] - Remove Entries that do not match the prompt enough.
+[Sort] - Sort the list based on the best match.
+[Filter] - Remove entries that do not match the prompt enough.
 [Sort & Filter] - Combined behaviour of the above.",,,
 refitfilters_searchByDesignType,Search by design type,Boolean,true,,Enables the search bar to also filter by design type in addition to weapon name. Does not count for sorting and as such is [only in effect if the searchbar has filtering enabled.],,,
 refitfilters_enableAdditionalFilters,Enable additional filters,Boolean,true,,"Enables the Projectile, Beam, PD and Non-PD Filters.",,,
