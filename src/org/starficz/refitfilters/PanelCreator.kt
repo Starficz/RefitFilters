@@ -59,8 +59,12 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
     var startingYOffset = 0f
 
     fun init() : CustomPanelAPI {
-        newFiltersPanel = Global.getSettings().createCustom(width, height-topPanelHeight, null)
-        val mainElement = newFiltersPanel.createUIElement(width, height-topPanelHeight, false)
+        var additionalFiltersEnabled = RFSettings.enableAdditionalFilters!!
+        var reduction = 0f
+        if (!additionalFiltersEnabled) reduction = 25f
+
+        newFiltersPanel = Global.getSettings().createCustom(width, height-topPanelHeight-reduction, null)
+        val mainElement = newFiltersPanel.createUIElement(width, height-topPanelHeight-reduction, false)
         newFiltersPanel.addUIElement(mainElement)
         mainElement.position.inTR(0f, 0f)
 
@@ -81,36 +85,48 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             position.setXAlignOffset(-5f)
             setShortcut(8, true)
         }
-        mainElement.addTooltipToPrevious(TooltipHelper("Show projectile weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltip(projectileButton, TooltipMakerAPI.TooltipLocation.ABOVE, 300f) { tooltip -> tooltip.addPara("Show projectile weapons.", 0f) }
 
         beamButton = mainElement.addAreaCheckbox("BEAM", null, standardColor.darker(), standardColor.darker().darker().darker(),  standardColor, 94f, 25f, 1f).apply {
             isChecked = ModPlugin.beamActive
             position.rightOfTop(projectileButton, 1f)
             setShortcut(9, true)
         }
-        mainElement.addTooltipToPrevious(TooltipHelper("Show beam weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltip(beamButton, TooltipMakerAPI.TooltipLocation.ABOVE, 300f) { tooltip -> tooltip.addPara("Show beam weapons.", 0f) }
 
         pdButton = mainElement.addAreaCheckbox("PD", null, standardColor.darker(), standardColor.darker().darker().darker(), standardColor, 94f, 25f, 1f).apply {
             isChecked = ModPlugin.pdActive
             position.rightOfTop(beamButton, 1f)
             setShortcut(10, true)
         }
-        mainElement.addTooltipToPrevious(TooltipHelper("Show point defense weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltip(pdButton, TooltipMakerAPI.TooltipLocation.ABOVE, 300f) { tooltip -> tooltip.addPara("Show point defense weapons.", 0f) }
 
         nonpdButton = mainElement.addAreaCheckbox("NON-PD", null, standardColor.darker(), standardColor.darker().darker().darker(), standardColor, 93f, 25f, 1f).apply {
             isChecked = ModPlugin.nonpdActive
             position.rightOfTop(pdButton, 1f)
             setShortcut(11, true)
         }
-        mainElement.addTooltipToPrevious(TooltipHelper("Show standard weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltip(nonpdButton, TooltipMakerAPI.TooltipLocation.ABOVE, 300f) { tooltip -> tooltip.addPara("Show standard weapons.", 0f) }
+
+        if (!additionalFiltersEnabled) {
+            projectileButton.position.inTL(100000f, 0f)
+            beamButton.position.inTL(100000f, 0f)
+            pdButton.position.inTL(100000f, 0f)
+            nonpdButton.position.inTL(100000f, 0f)
+        }
 
         kineticButton = mainElement.addAreaCheckbox("", null, keColor.darker(), keColor.darker().darker(), keColor, 25f, 25f, 0f).apply {
             glowBrightness = 0.5f
             isChecked = ModPlugin.kineticActive
-            position.belowLeft(projectileButton, 1f)
+
+            if (additionalFiltersEnabled) position.belowLeft(projectileButton, 1f)
+            else {
+                position.inTL(0f, 0f)
+                //position.setXAlignOffset(-5f)
+            }
             //position.belowLeft(resetButton, 1f)
         }
-        mainElement.addTooltipToPrevious(TooltipHelper("Show kinetic weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltip(kineticButton, TooltipMakerAPI.TooltipLocation.ABOVE, 300f) { tooltip -> tooltip.addPara("Show kinetic weapons.", 0f) }
         keIcon = mainElement.addLunaSpriteElement(kineticIconString, LunaSpriteElement.ScalingTypes.STRETCH_SPRITE, 25f,25f).apply {
             onClick {
                 playClickSound()
@@ -125,7 +141,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             position.rightOfTop(kineticButton, 1f)
             glowBrightness = 0.5f
         }
-        mainElement.addTooltipToPrevious(TooltipHelper("Show high explosive weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltip(heButton, TooltipMakerAPI.TooltipLocation.ABOVE, 300f) { tooltip -> tooltip.addPara("Show high explosive weapons.", 0f) }
         heIcon = mainElement.addLunaSpriteElement(highExplosiveIconString, LunaSpriteElement.ScalingTypes.STRETCH_SPRITE, 25f,25f).apply {
             onClick {
                 playClickSound()
@@ -140,7 +156,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             position.rightOfTop(heButton, 1f)
             glowBrightness = 0.5f
         }
-        mainElement.addTooltipToPrevious(TooltipHelper("Show energy weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltip(energyButton, TooltipMakerAPI.TooltipLocation.ABOVE, 300f) { tooltip -> tooltip.addPara("Show energy weapons.", 0f) }
         energyIcon = mainElement.addLunaSpriteElement(energyIconString, LunaSpriteElement.ScalingTypes.STRETCH_SPRITE, 25f,25f).apply {
             onClick {
                 playClickSound()
@@ -155,7 +171,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             position.rightOfTop(energyButton, 1f)
             glowBrightness = 0.5f
         }
-        mainElement.addTooltipToPrevious(TooltipHelper("Show fragmentation weapons.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltip(fragButton, TooltipMakerAPI.TooltipLocation.ABOVE, 300f) { tooltip -> tooltip.addPara("Show fragmentation weapons.", 0f) }
         fragIcon = mainElement.addLunaSpriteElement(fragmentationIconString, LunaSpriteElement.ScalingTypes.STRETCH_SPRITE, 25f,25f).apply {
             onClick {
                 playClickSound()
@@ -173,7 +189,9 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             backgroundColor = Misc.getHighlightColor().darker().darker().darker()
             borderColor = Misc.getHighlightColor().darker()
         }
-        mainElement.addTooltipToPrevious(TooltipHelper("Shows highlighted range. 1500 displays up to infinity.", 350f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltip(rangeSlider.elementPanel, TooltipMakerAPI.TooltipLocation.ABOVE, 450f) {
+                tooltip -> tooltip.addPara("Filters out based on their non-modified range. Press anywhere within the slider to move the nearest point. Setting the maximum to 1500 makes the upper limit infinite.", 0f,
+                    Misc.getTextColor(), Misc.getHighlightColor(), "1500") }
 
         topFiltersPanel = Global.getSettings().createCustom(width, topPanelHeight, null)
         val topElement = topFiltersPanel.createUIElement(width, topPanelHeight, false)
@@ -187,7 +205,7 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             //position.belowLeft(projectileButton, 1f)
             position.setXAlignOffset(0f)
         }
-        topElement.addTooltipToPrevious(TooltipHelper("Reset all filters. CTRL+R Hotkey.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+        mainElement.addTooltip(resetButton, TooltipMakerAPI.TooltipLocation.ABOVE, 300f) { tooltip -> tooltip.addPara("Reset all filters. CTRL+R Hotkey.", 0f) }
 
         searchBox = SearchField(topElement, 251f, 25f, ModPlugin.currentSearch).apply {
             position.rightOfMid(resetButton, 1f)
@@ -195,7 +213,25 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             backgroundColor = Misc.getDarkPlayerColor().darker()
             backgroundAlpha = 0.7f
         }
-        topElement.addTooltipToPrevious(TooltipHelper("Sorts results by search text. Esc to clear.\nDoes not exclude unmatched results.", 300f), TooltipMakerAPI.TooltipLocation.ABOVE)
+
+        var searchbarBehaviour = RFSettings.searchBarBehaviour
+
+        var sortExtra = if (searchbarBehaviour == "Sort") "[x]" else ""
+        var filterExtra = if (searchbarBehaviour == "Filter") "[x]" else ""
+        var sortAndFilterExtra = if (searchbarBehaviour == "Sort & Filter") "[x]" else ""
+
+        mainElement.addTooltip(searchBox.elementPanel, TooltipMakerAPI.TooltipLocation.ABOVE, 450f)
+            { tooltip ->
+                tooltip.addPara("An automatically selected searchbar. Press either ESC or Shift + Backspace to clear all of its contents. " +
+                        "The searchbar has different modes that can be changed to within the mods configs, the [x] displays which one is currently active.",
+                    0f, Misc.getTextColor(), Misc.getHighlightColor(), "ESC", "Shift + Backspace", "x")
+
+                tooltip.addSpacer(10f)
+                tooltip.addPara("Sort - Sort the searchbar based on the best match. $sortExtra", 0f, Misc.getTextColor(), Misc.getHighlightColor(), "Sort", "x")
+                tooltip.addPara("Filter - Remove entries that do not match the prompt enough. $filterExtra", 0f, Misc.getTextColor(), Misc.getHighlightColor(), "Filter", "x")
+                tooltip.addPara("Sort & Filter - Combined behaviour of the above. $sortAndFilterExtra", 0f, Misc.getTextColor(), Misc.getHighlightColor(), "Sort & Filter", "x")
+
+        }
 
         filterWeapons()
 
@@ -242,13 +278,18 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             weapon to weaponSpec
         }
 
+        var searchbarBehaviour = RFSettings.searchBarBehaviour
 
         // filter out the list with the added filters, sort the weapons by fuzzy search score
-        val sortedWeaponSpecPairs = weaponSpecPairs.filter{ !weaponFiltered(it.second) }.sortedWith(
-            compareByDescending (
-                {FuzzySearch.fuzzyMatch(ModPlugin.currentSearch, it.second.weaponName).second}
+        var sortedWeaponSpecPairs = weaponSpecPairs.filter{ !weaponFiltered(it.second) }
+
+        if (searchbarBehaviour != "Filter") {
+            sortedWeaponSpecPairs = sortedWeaponSpecPairs.sortedWith(
+                compareByDescending (
+                    {FuzzySearch.fuzzyMatch(ModPlugin.currentSearch, it.second.weaponName).second}
+                )
             )
-        )
+        }
 
         // clear the weapons list
         ReflectionUtils.invoke("clear", weaponsList)
@@ -319,11 +360,13 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
             throw Exception("Unable to differentiate weaponPickerDialog's obf fields")
         }
 
-        val weaponPickerHeight = when{
+        var weaponPickerHeight = when{
             sortedWeaponSpecPairs.size <= 1 -> 234f
             sortedWeaponSpecPairs.size >= 1 && sortedWeaponSpecPairs.size <= 6 -> 156f + (78f * sortedWeaponSpecPairs.size)
             else -> 624f
         }
+
+        if (!RFSettings.enableAdditionalFilters!!) weaponPickerHeight -= 25f
 
         val noCurrentWeaponPad = if(index == 0) 95f else 0f
         val extraWeaponPad = if(index == 0 && sortedWeaponSpecPairs.size >= 7) 78f else 0f
@@ -343,6 +386,8 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
     }
 
     fun weaponFiltered(weaponSpec: WeaponSpecAPI): Boolean{
+        var searchbarBehaviour = RFSettings.searchBarBehaviour
+
         if(weaponSpec.damageType == DamageType.KINETIC && !ModPlugin.kineticActive) return true
         if(weaponSpec.damageType == DamageType.HIGH_EXPLOSIVE && !ModPlugin.heActive) return true
         if(weaponSpec.damageType == DamageType.ENERGY && !ModPlugin.energyActive) return true
@@ -356,6 +401,17 @@ class PanelCreator(var weaponPickerDialog: UIPanelAPI, var openedFromCampaign: B
 
         if(weaponSpec.maxRange < ModPlugin.lowerRange && ModPlugin.lowerRange != ModPlugin.minRange) return true
         if(weaponSpec.maxRange > ModPlugin.upperRange && ModPlugin.upperRange != ModPlugin.maxRange) return true
+
+        if (searchbarBehaviour != "Sort" && ModPlugin.currentSearch.isNotEmpty()) {
+            var searchByDesignType = RFSettings.searchByDesignType!!
+
+            var matchesName = FuzzySearch.fuzzyMatch(ModPlugin.currentSearch, weaponSpec.weaponName).second >= 75
+            var matchesDesignType = FuzzySearch.fuzzyMatch(ModPlugin.currentSearch, weaponSpec.manufacturer).second >= 80
+
+            if (!matchesName && !searchByDesignType || searchByDesignType && !matchesName && !matchesDesignType) {
+                return true
+            }
+        }
 
         return false
     }
