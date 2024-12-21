@@ -39,3 +39,19 @@ fun UIComponentAPI.setOpacity(alpha: Float)
     ReflectionUtils.invoke("setOpacity", this, alpha)
 }
 
+fun TooltipMakerAPI.addTooltip(to: UIComponentAPI, location: TooltipMakerAPI.TooltipLocation, width: Float, lambda: (TooltipMakerAPI) -> Unit) {
+    this.addTooltipTo(object: TooltipMakerAPI.TooltipCreator {
+        override fun isTooltipExpandable(tooltipParam: Any?): Boolean {
+            return false
+        }
+
+        override fun getTooltipWidth(tooltipParam: Any?): Float {
+            return width
+        }
+
+        override fun createTooltip(tooltip: TooltipMakerAPI?, expanded: Boolean, tooltipParam: Any?) {
+            lambda(tooltip!!)
+        }
+
+    }, to, location)
+}
