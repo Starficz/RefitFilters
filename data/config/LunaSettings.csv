@@ -8,3 +8,7 @@ refitfilters_searchbarBehaviour,Searchbar behaviour,Radio,Sort,"Sort, Filter, So
 [Sort & Filter] - Combined behaviour of the above.",,,
 refitfilters_searchByDesignType,Search by design type,Boolean,true,,Enables the search bar to also filter by design type in addition to weapon name. Does not count for sorting and as such is [only in effect if the searchbar has filtering enabled.],,,
 refitfilters_enableAdditionalFilters,Enable additional filters,Boolean,true,,"Enables the Projectile, Beam, PD and Non-PD Filters.",,,
+,,,,,,,,
+refitfilters_simulation_header,Simulation,Header,Simulation,,,,,
+refitfilters_enableSimulation,Enable Weapon Simulation,Boolean,false,,"An experimental feature that enables a quick and preset weapon simulation. Can be entered by pressing [F1] while hovering over a weapon in the weapons selection list in refit. The simulation equips a hyperion with the weapon you selected, facing you off against a medusa and an enforcer with no AI.",,,
+,,,,,,,,

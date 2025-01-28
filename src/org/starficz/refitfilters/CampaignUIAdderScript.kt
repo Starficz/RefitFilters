@@ -60,7 +60,7 @@ class CampaignUIAdderScript : EveryFrameScript{
             if (weaponDialogPanel is UIPanelAPI) {
                 val innerWeaponPanel = ReflectionUtils.invoke("getInnerPanel", weaponDialogPanel) as UIPanelAPI
                 if (dockedPanel == null || dockedPanel!! !in innerWeaponPanel.getChildrenCopy()) {
-                    val creator = PanelCreator(weaponDialogPanel, true)
+                    val creator = PanelCreator(weaponDialogPanel, true, docked)
                     dockedPanel = creator.init()
                 }
             }

@@ -30,7 +30,7 @@ class CombatUIAdderScript : BaseEveryFrameCombatPlugin() {
             if (weaponDialogPanel is UIPanelAPI) {
                 val innerWeaponPanel = ReflectionUtils.invoke("getInnerPanel", weaponDialogPanel) as UIPanelAPI
                 if (dockedPanel == null || dockedPanel!! !in innerWeaponPanel.getChildrenCopy()) {
-                    val creator = PanelCreator(weaponDialogPanel, false)
+                    val creator = PanelCreator(weaponDialogPanel, false, false)
                     dockedPanel = creator.init()
                 }
             }

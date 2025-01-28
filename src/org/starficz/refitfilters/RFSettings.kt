@@ -12,6 +12,7 @@ object RFSettings : LunaSettingsListener
     var searchByDesignType = LunaSettings.getBoolean(modID, "refitfilters_searchByDesignType")
     var enableAdditionalFilters = LunaSettings.getBoolean(modID, "refitfilters_enableAdditionalFilters")
 
+    var enableWeaponSimulation = LunaSettings.getBoolean(modID, "refitfilters_enableSimulation")
 
 
     override fun settingsChanged(modID: String) {
@@ -27,6 +28,8 @@ object RFSettings : LunaSettingsListener
         searchBarBehaviour = LunaSettings.getString(modID, "refitfilters_searchbarBehaviour")
         searchByDesignType = LunaSettings.getBoolean(modID, "refitfilters_searchByDesignType")
         enableAdditionalFilters = LunaSettings.getBoolean(modID, "refitfilters_enableAdditionalFilters")
+
+        enableWeaponSimulation = LunaSettings.getBoolean(modID, "refitfilters_enableSimulation")
 
         if (!enableAdditionalFilters!!) {
             ModPlugin.projectileActive = true
