@@ -1,6 +1,6 @@
 fieldID,fieldName,fieldType,defaultValue,secondaryValue,fieldDescription,minValue,maxValue,tab
 refitfilters_header,Configurations,Header,Configurations,,,,,
-refitfilters_searchbarBehaviour,Searchbar behaviour,Radio,Sort,"Sort, Filter, Sort & Filter","Select the behaviour of the searchbar.
+refitfilters_searchbarBehaviour,Searchbar behaviour,Radio,"Sort & Filter","Sort, Filter, Sort & Filter","Select the behaviour of the searchbar.
 
 
 [Sort] - Sort the list based on the best match.
