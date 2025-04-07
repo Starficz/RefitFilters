@@ -1,6 +1,14 @@
+Version 3.0.0
+- 0.98 Compatibility
+- Rewrote then entire mod again, using my new experience with Starsector ui.
+- Added 2 new filters, Ammo and Non-Ammo
+- Added the ability to change the range slider ranges arbitrarily
+- Added the ability to change the order of the filters, and the ability to diable 2 of them
+
 Version 2.0.0
 - NOT SAVE COMPATIBLE WITH 1.X.X
 - Rewrote entire mod, now works off of the UI directly in the refit weapon panel
+- Re-Added Utility Mod tag
 
 Version 1.1.1
 - One string change to fix the jar not loading
