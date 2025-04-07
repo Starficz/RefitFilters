@@ -3,16 +3,16 @@
     "name": "Refit Filters",
     "author": "Starficz",
     "utility": "true",
-    "version": "2.0.0",
+    "version": "3.0.0",
     "description": "Adds additional filters to the refit weapon picker.",
-    "gameVersion": "0.97a-RC11",
+    "gameVersion": "0.98a-RC7",
     "jars":["jars/RefitFilters.jar"],
     "modPlugin":"org.starficz.refitfilters.ModPlugin",
     "dependencies": [
         {
             "id": "lunalib",
             "name": "LunaLib",
-            "version": { "major": "1", "minor": "8", "patch": "5"}
+            "version": { "major": "2", "minor": "0", "patch": "0"}
         }
     ]
 }

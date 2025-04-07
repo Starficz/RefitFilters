@@ -1,11 +1,9 @@
 package org.starficz.refitfilters
 
-import kotlin.jvm.JvmStatic
-
 /**
  * https://github.com/android-password-store/sublime-fuzzy
  */
-public object FuzzySearch {
+object FuzzySearch {
     internal object Constants {
         const val SEQUENTIAL_BONUS = 15
         const val SEPARATOR_BONUS = 30

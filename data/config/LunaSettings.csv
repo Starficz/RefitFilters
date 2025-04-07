@@ -1,5 +1,5 @@
 fieldID,fieldName,fieldType,defaultValue,secondaryValue,fieldDescription,minValue,maxValue,tab
-refitfilters_header,Configurations,Header,Configurations,,,,,
+refitfilters_header,Filter Configurations,Header,Filter Configurations,,,,,
 refitfilters_searchbarBehaviour,Searchbar behaviour,Radio,"Sort & Filter","Sort, Filter, Sort & Filter","Select the behaviour of the searchbar.
 
 
@@ -7,8 +7,17 @@ refitfilters_searchbarBehaviour,Searchbar behaviour,Radio,"Sort & Filter","Sort,
 [Filter] - Remove entries that do not match the prompt enough.
 [Sort & Filter] - Combined behaviour of the above.",,,
 refitfilters_searchByDesignType,Search by design type,Boolean,true,,Enables the search bar to also filter by design type in addition to weapon name. Does not count for sorting and as such is [only in effect if the searchbar has filtering enabled.],,,
-refitfilters_enableAdditionalFilters,Enable additional filters,Boolean,true,,"Enables the Projectile, Beam, PD and Non-PD Filters.",,,
+refitfilters_resetButtonSearchBarPanelOrder,Reset Button/Search Bar Filter Location,Int,1,,"Location of the Reset Button/Search Bar Filter Panel, 1 being the top, 4 at the bottom.",1,4,
+refitfilters_vanillaWeaponAvailabilityWeaponSlotPanelOrder,Availability/Weapon Slot Filter Location,Int,2,,"Location of the vanilla Weapon Availability/Weapon Slot filter Panel, 1 being the top, 4 at the bottom.",1,4,
+refitfilters_weaponTypePanelOrder,Weapon Type Filter Location,Int,3,,"Location of the Weapon Type filter Panel, 1 being the top, 4 at the bottom. 0 to disable.",0,4,
+refitfilters_damageTypeRangeSliderOrder,Damage Type/Range Slider Filter Location,Int,4,,"Location of the Damage Type/Range Slider filter Panel, 1 being the top, 4 at the bottom. 0 to disable.",0,4,
 ,,,,,,,,
-refitfilters_simulation_header,Simulation,Header,Simulation,,,,,
-refitfilters_enableSimulation,Enable Weapon Simulation,Boolean,false,,"An experimental feature that enables a quick and preset weapon simulation. Can be entered by pressing [F1] while hovering over a weapon in the weapons selection list in refit. The simulation equips a hyperion with the weapon you selected, facing you off against a medusa and an enforcer with no AI.",,,
+refitfilters_rangeslider_header,Range Slider,Header,Range Slider,,,,,
+refitfilters_minRange,Range Slider Min Range,Int,0,,"The lower end of the range slider. Setting the range slider to this value includes all lower ranges.",0,99000,
+refitfilters_maxRange,Range Slider Max Range,Int,1500,,"The upper end of the range slider. Setting the range slider to this value includes all higher ranges.",0,99000,
+refitfilters_rangeTickSnapping,Range Slider Snapping,Boolean,true,,"Enables snapping to the nearest tick mark on the Range Slider.",,,
+refitfilters_rangeIncrement,Range Slider Snapping Increment,Int,100,,"The distance between each tick mark on the Range Slider.",0,10000,
+,,,,,,,,
+#refitfilters_simulation_header,Simulation,Header,Simulation,,,,,
+#refitfilters_enableSimulation,Enable Weapon Simulation,Boolean,false,,"An experimental feature that enables a quick and preset weapon simulation. Can be entered by pressing [F1] while hovering over a weapon in the weapons selection list in refit. The simulation equips a hyperion with the weapon you selected, facing you off against a medusa and an enforcer with no AI.",,,
 ,,,,,,,,
