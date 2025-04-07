@@ -1,6 +1,6 @@
 Version 3.0.0
 - 0.98 Compatibility
-- Rewrote then entire mod again, using my new experience with Starsector ui.
+- Rewrote then entire mod again, using my new experience with Starsector UI.
 - Added 2 new filters, Ammo and Non-Ammo
 - Added the ability to change the range slider ranges arbitrarily
 - Added the ability to change the order of the filters, and the ability to disable 2 of them
@@ -22,5 +22,5 @@ Version 1.0.1
 - Fixed Log Spam
 - Removed Utility Mod tag
 
-Verison 1.0.0
+Version 1.0.0
 - Initial Release
