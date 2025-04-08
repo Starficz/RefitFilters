@@ -28,7 +28,6 @@ open class ExtendableCustomUIPanelPlugin(var customPanel: CustomPanelAPI) : Base
     var inputCaptureLeftPad = 0f
     var inputCaptureRightPad = 0f
 
-
     var isHovering = false
         private set
 
@@ -109,5 +108,4 @@ open class ExtendableCustomUIPanelPlugin(var customPanel: CustomPanelAPI) : Base
     fun onHeld(function: (InputEventAPI) -> Unit) { onHeldFunctions.add(function) }
     fun onKeyDown(function: (InputEventAPI) -> Unit) { onKeyDownFunctions.add(function) }
     fun onKeyUp(function: (InputEventAPI) -> Unit) { onKeyUpFunctions.add(function) }
-
 }

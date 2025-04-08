@@ -5,14 +5,13 @@ import com.fs.starfarer.api.ui.*
 import com.fs.starfarer.api.util.Misc
 import org.lazywizard.lazylib.opengl.ColorUtils.glColor
 import org.lwjgl.opengl.GL11
-import org.starficz.UIFramework.ReflectionUtils.invoke
-import org.starficz.refitfilters.FilterPanelCreator.weaponDialogPanel
 import org.starficz.UIFramework.*
 import org.starficz.UIFramework.Font
 import org.starficz.UIFramework.anchorInTopLeftOfParent
 import org.starficz.UIFramework.anchorToPreviousMatchingCenter
 import org.starficz.UIFramework.onClick
 import org.starficz.refitfilters.FilterData
+import org.starficz.refitfilters.FilterPanelCreator
 import org.starficz.refitfilters.RFSettings
 import java.awt.Color
 import kotlin.math.abs
@@ -43,7 +42,7 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
             Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
                 addPara("Show kinetic weapons.", 0f)
             }
-            onClick { weaponDialogPanel.invoke("notifyFilterChanged") }
+            onClick { FilterPanelCreator.filtersChanged() }
         }
 
         Image(kineticIconPath, height, height) {
@@ -71,7 +70,7 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
             Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
                 addPara("Show high explosive weapons.", 0f)
             }
-            onClick { weaponDialogPanel.invoke("notifyFilterChanged") }
+            onClick { FilterPanelCreator.filtersChanged() }
         }
         Image(highExplosiveIconPath, height, height) {
             anchorToPreviousMatchingCenter()
@@ -96,7 +95,7 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
             Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
                 addPara("Show energy weapons.", 0f)
             }
-            onClick { weaponDialogPanel.invoke("notifyFilterChanged") }
+            onClick { FilterPanelCreator.filtersChanged() }
         }
         Image(energyIconPath, height, height) {
             anchorToPreviousMatchingCenter()
@@ -121,7 +120,7 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
             Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
                 addPara("Show fragmentation weapons.", 0f)
             }
-            onClick { weaponDialogPanel.invoke("notifyFilterChanged") }
+            onClick { FilterPanelCreator.filtersChanged() }
         }
         Image(fragmentationIconPath, height, height) {
             anchorToPreviousMatchingCenter()
@@ -284,7 +283,7 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
                         if (snapToTicks) Global.getSoundPlayer().playUISound("ui_number_scrolling", 1f, 0.8f)
                         FilterData.lowerRange = lowerRange
                         FilterData.upperRange = upperRange
-                        weaponDialogPanel.invoke("notifyFilterChanged")
+                        FilterPanelCreator.filtersChanged()
                     }
                 }
                 inputCaptureBottomPad = 4f

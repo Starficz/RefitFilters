@@ -11,8 +11,6 @@ import org.lazywizard.lazylib.opengl.ColorUtils.glColor
 import org.lwjgl.input.Keyboard
 import org.lwjgl.input.Mouse
 import org.lwjgl.opengl.GL11
-import org.starficz.refitfilters.FilterPanelCreator.weaponDialogPanel
-import org.starficz.UIFramework.ReflectionUtils.invoke
 import org.starficz.UIFramework.*
 import org.starficz.UIFramework.Font
 import org.starficz.UIFramework.anchorInLeftMiddleOfParent
@@ -20,6 +18,7 @@ import org.starficz.UIFramework.anchorRightOfPreviousMatchingMid
 import org.starficz.UIFramework.onClick
 import org.starficz.refitfilters.FilterData
 import org.starficz.refitfilters.FilterDataClass
+import org.starficz.refitfilters.FilterPanelCreator
 import org.starficz.refitfilters.RFSettings
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
@@ -34,7 +33,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
     fun resetFilters() {
         if (FilterData != FilterDataClass()) {
             FilterData = FilterDataClass()
-            weaponDialogPanel.invoke("notifyFilterChanged")
+            FilterPanelCreator.filtersChanged()
         }
     }
 
@@ -45,8 +44,13 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
                 addPara("Reset all filters. You can also press CTRL + R or the Middle Mouse Button to do the same.",
                     0f, Misc.getTextColor(), Misc.getHighlightColor(), "CTRL + R", "Middle Mouse Button")
             }
-            onClick { resetFilters()  }
+            onClick { resetFilters() }
         }
+
+        // Custom TextField instead of vanilla TextField as a vanilla's implementation needs focus to work,
+        // and having focus consumes all key presses, even escape. This makes the desired behaviour for this text field
+        // of always being active, but allows for exiting the weapon picker panel and filter hotkeys impossible.
+        // Also implements all the reset keys as this is a convenient place that already captures all input.
         CustomPanel(right-previousComponent!!.right-1, height) { plugin ->
             anchorRightOfPreviousMatchingMid(1f)
 
@@ -93,7 +97,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
                     if (Mouse.isButtonDown(2)) { resetFilters() }
                 }
 
-                fun appendCharIfPossible(char: Char){
+                fun appendCharIfPossible(char: Char): Boolean{
                     val hasRoomToAppend = searchText.computeTextWidth(searchText.text) < (width - 20)
                     val isValidChar = when(char){
                         '\u0000' -> false
@@ -105,8 +109,10 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
                     if (isValidChar && hasRoomToAppend){
                         playSound("ui_typer_type")
                         FilterData.currentSearch += char
+                        return true
                     } else{
                         playSound("ui_typer_buzz")
+                        return false
                     }
                 }
 
@@ -115,7 +121,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
                         event.consume()
                         playSound("ui_typer_type")
                         FilterData.currentSearch = FilterData.currentSearch.dropLast(1)
-                        weaponDialogPanel.invoke("notifyFilterChanged")
+                        FilterPanelCreator.filtersChanged()
                     }
                 }
 
@@ -129,7 +135,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
                             words.size <= 1 -> ""
                             else -> words.dropLast(1).joinToString(" ")
                         }
-                        weaponDialogPanel.invoke("notifyFilterChanged")
+                        FilterPanelCreator.filtersChanged()
                     }
                 }
 
@@ -138,7 +144,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
                         event.consume()
                         playSound("ui_typer_type")
                         FilterData.currentSearch = ""
-                        weaponDialogPanel.invoke("notifyFilterChanged")
+                        FilterPanelCreator.filtersChanged()
                     }
                 }
 
@@ -155,7 +161,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
                             appendCharIfPossible(char)
                         }
                         event.consume()
-                        weaponDialogPanel.invoke("notifyFilterChanged")
+                        FilterPanelCreator.filtersChanged()
                     }
                     else if (event.eventValue == Keyboard.KEY_R && event.isCtrlDown){
                         event.consume()
@@ -164,9 +170,10 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
                     else if (!event.isCtrlDown && !event.isAltDown && event.eventValue !in (2..11) &&
                         event.eventValue != Keyboard.KEY_RETURN && event.eventValue != Keyboard.KEY_NUMPADENTER)
                     {
-                        appendCharIfPossible(event.eventChar)
-                        event.consume()
-                        weaponDialogPanel.invoke("notifyFilterChanged")
+                        if(appendCharIfPossible(event.eventChar)){
+                            event.consume()
+                            FilterPanelCreator.filtersChanged()
+                        }
                     }
                 }
             }

@@ -26,6 +26,10 @@ object FilterPanelCreator {
     var startingYOffset = 0f
     lateinit var weaponDialogPanel: UIPanelAPI
 
+    fun filtersChanged(){
+        weaponDialogPanel.invoke("notifyFilterChanged")
+    }
+
     fun modifyFilterPanel(coreUI: UIPanelAPI, openedFromCampaign: Boolean, docked: Boolean) {
         // get the weaponDialogPanel that hasnt been modified if possible, relevant for clicking between weapon slots
         weaponDialogPanel = coreUI.allChildsWithMethod("getPickedWeaponSpec").filter { wdp ->

@@ -333,6 +333,22 @@ internal fun UIPanelAPI.addImage(imageSpritePath: String, width: Float, height: 
     return BoxedUIImage(image)
 }
 
+internal fun UIPanelAPI.addLabelledValue(label: String, value: String, labelColor: Color, valueColor: Color, width: Float): UIComponentAPI {
+    val tempPanel = Global.getSettings().createCustom(width, height, null)
+    val tempTMAPI = tempPanel.createUIElement(width, height, false)
+    val labelledValue = tempTMAPI.addLabelledValue(label, value, labelColor, valueColor, width, 0f)
+    this.addComponent(labelledValue)
+    return BoxedUIImage(labelledValue)
+}
+
+internal fun UIPanelAPI.addTextField(width: Float, height: Float, font: Font): TextFieldAPI {
+    val tempPanel = Global.getSettings().createCustom(width, height, null)
+    val tempTMAPI = tempPanel.createUIElement(width, height, false)
+    val textField = tempTMAPI.addTextField(width, height, getFontPath(font), 0f)
+    this.addComponent(textField)
+    return textField
+}
+
 internal fun UIPanelAPI.addButton(
     text: String, data: Any?, baseColor: Color, bgColor: Color, align: Alignment, style: CutStyle,
     width: Float, height: Float, font: Font? = null): ButtonAPI {
