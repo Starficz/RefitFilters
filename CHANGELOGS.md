@@ -1,3 +1,6 @@
+Version 3.0.1
+- Fixed CTRL weapon compare bug with CTD in codex 
+
 Version 3.0.0
 - 0.98 Compatibility
 - Rewrote then entire mod again, using my new experience with Starsector UI.
