@@ -74,25 +74,28 @@ object FilterPanelCreator {
         // sort list after we have found it
         val sortedSpecPairs = when(pickerPanelType){
             PickerPanelType.Weapons -> {
+                val searchString = weaponFilterData.currentSearch
                 val comparator: Comparator<Pair<Any, WeaponSpecAPI>> = compareByDescending { (_, spec) ->
-                    maxOf(FuzzySearch.fuzzyMatch(weaponFilterData.currentSearch, spec.weaponName).second,
-                          FuzzySearch.fuzzyMatch(weaponFilterData.currentSearch, spec.manufacturer).second,
-                       spec.sourceMod?.let { FuzzySearch.fuzzyMatch(weaponFilterData.currentSearch, it.name).second } ?: 0
+                    maxOf(FuzzySearch.fuzzyMatch(searchString, spec.weaponName).second,
+                          FuzzySearch.fuzzyMatch(searchString, spec.manufacturer).second,
+                       spec.sourceMod?.let { FuzzySearch.fuzzyMatch(searchString, it.name).second } ?: 0
                     )
                 }
 
                 sortAndFilterList(itemsList, WeaponSpecAPI::class.java, ::weaponFiltered, weaponFilterData,
-                    comparator, weaponFilterData.currentSearch, RFSettings.searchBarBehaviour)
+                    comparator, searchString, RFSettings.searchBarBehaviour)
             }
             PickerPanelType.Fighters -> {
+                val searchString = fighterFilterData.currentSearch
                 val comparator: Comparator<Pair<Any, FighterWingSpecAPI>> = compareByDescending { (_, spec) ->
-                    maxOf(FuzzySearch.fuzzyMatch(weaponFilterData.currentSearch, spec.wingName).second,
-                       spec.sourceMod?.let { FuzzySearch.fuzzyMatch(weaponFilterData.currentSearch, it.name).second } ?: 0
+                    maxOf(FuzzySearch.fuzzyMatch(searchString, spec.wingName).second,
+                        spec.variant?.hullSpec?.manufacturer?.let { FuzzySearch.fuzzyMatch(searchString, it).second } ?: 0,
+                        spec.sourceMod?.let { FuzzySearch.fuzzyMatch(searchString, it.name).second } ?: 0
                     )
                 }
 
                 sortAndFilterList(itemsList, FighterWingSpecAPI::class.java, ::fighterFiltered, fighterFilterData,
-                    comparator, fighterFilterData.currentSearch, RFSettings.searchBarBehaviour)
+                    comparator, searchString, RFSettings.searchBarBehaviour)
             }
         }
 
@@ -166,107 +169,6 @@ object FilterPanelCreator {
 //            addSimulationTrigger(mainElement) TODO: actually finally implement the weapon sim
 //        }
     }
-/*
-    fun modifyFilterPanel(coreUI: UIPanelAPI, openedFromCampaign: Boolean, docked: Boolean) {
-        // get the weaponDialogPanel that hasnt been modified if possible, relevant for clicking between weapon slots
-        weaponDialogPanel = coreUI.allChildsWithMethod("getPickedWeaponSpec").filter { wdp ->
-            val innerWeaponPanel = wdp.invoke("getInnerPanel") as? UIPanelAPI
-            innerWeaponPanel?.getChildrenCopy()?.any { it is CustomPanelAPI && it.plugin is ExtendableCustomUIPanelPlugin } == false
-        }.firstOrNull() as? UIPanelAPI ?: return
-
-        val innerWeaponPanel = weaponDialogPanel.invoke("getInnerPanel") as? UIPanelAPI ?: return
-
-        val uiElements = innerWeaponPanel.getChildrenCopy()
-        if (uiElements.any { it is CustomPanelAPI && it.plugin is ExtendableCustomUIPanelPlugin }) return // return if added
-
-        val existingFiltersIndex = uiElements.indexOfFirst { it.hasMethodOfName("addItem") }
-
-        val currentlySelected = uiElements.getOrNull(existingFiltersIndex-2)
-        val currentlyMountedText = uiElements.getOrNull(existingFiltersIndex-1)
-        val existingFilters = uiElements[existingFiltersIndex]
-        val weaponsList = uiElements[existingFiltersIndex+1] // weaponsList should always exist
-        var noWeaponsOrNull = uiElements.getOrNull(existingFiltersIndex+2)
-
-        // sort list after we have found it
-        val weaponComparator: Comparator<Pair<Any, WeaponSpecAPI>> = compareByDescending { (_, spec) ->
-            maxOf(
-                FuzzySearch.fuzzyMatch(weaponFilterData.currentSearch, spec.weaponName).second,
-                FuzzySearch.fuzzyMatch(weaponFilterData.currentSearch, spec.manufacturer).second,
-                spec.sourceMod?.let { FuzzySearch.fuzzyMatch(weaponFilterData.currentSearch, it.name).second } ?: 0
-            )
-        }
-
-        val sortedWeaponSpecPairs = sortAndFilterList(weaponsList, WeaponSpecAPI::class.java,
-            ::weaponFiltered, weaponComparator, weaponFilterData.currentSearch, RFSettings.searchBarBehaviour  )
-
-        // add the filter panels if required
-        val searchBarFilterPanel =
-            innerWeaponPanel.createSearchBarFilterPanel(rowWidth, filterRowHeight, weaponDialogPanel, weaponFilterData)
-        val weaponTypesFilterPanel = if(RFSettings.WeaponTypePanelOrder != 0)
-            innerWeaponPanel.createWeaponTypesFilterPanel(rowWidth, filterRowHeight, weaponDialogPanel, weaponFilterData) else null
-        val damageTypeRangeSliderFilterPanel = if(RFSettings.DamageTypeRangeSliderOrder != 0)
-            innerWeaponPanel.createDamageTypeRangeSliderFilterPanel(rowWidth, filterRowHeight, weaponDialogPanel, weaponFilterData) else null
-
-        // remake the "No weapons matching filter" panel if we are the ones that filtered out all the weapons
-        if (sortedWeaponSpecPairs.isEmpty() && noWeaponsOrNull == null) {
-            noWeaponsOrNull = innerWeaponPanel.CustomPanel(rowWidth, 78f){
-                Text(" No weapons matching filter", color = Misc.getBasePlayerColor()) {
-                    anchorInCenterOfParent()
-                }
-            }
-        }
-
-        // get all the active filter panels
-        val activeFilterPanels = listOfNotNull(
-            searchBarFilterPanel to RFSettings.ResetButtonSearchBarPanelOrder,
-            existingFilters to RFSettings.VanillaWeaponAvailabilityWeaponSlotPanelOrder,
-            weaponTypesFilterPanel?.let { it to RFSettings.WeaponTypePanelOrder }, // Only add if non-null
-            damageTypeRangeSliderFilterPanel?.let { it to RFSettings.DamageTypeRangeSliderOrder } // Only add if non-null
-        ).filter { (_, order) -> order != 0 }.sortedBy { (_, order) -> order }.map { (panel, _) -> panel }
-
-        /*
-        * To the people reading this, as much progress as I have made with the UIFramework, interfacing with vanilla
-        * still requires a lot of pixel peeping and magic numbers behind the scenes to make stuff line up perfectly.
-        */
-
-        // calculate the height
-        val weaponsListHeight = when(sortedWeaponSpecPairs.size) {
-            in 0..6 -> 78f * sortedWeaponSpecPairs.size
-            else -> 78f * (6 + if(currentlySelected == null) 1 else 0) // additional 1 weapon shown in list if nothing selected
-        }
-
-        var weaponPickerHeight = weaponsListHeight + 12f +
-            innerWeaponPanel.getChildrenCopy().filter { it !== weaponsList }.sumOf { it.height.toDouble() }.toFloat()
-
-        // position all the panels correctly, make sure to special case the first element based on if we have a weapon selected or not
-        activeFilterPanels.forEachIndexed { index, filterPanel ->
-            if(index == 0){
-                if (currentlyMountedText != null) {
-                    filterPanel.position.belowLeft(currentlySelected, 5f)
-                    weaponPickerHeight += 3
-                }
-                else {
-                    filterPanel.yAlignOffset = innerWeaponPanel.top - filterPanel.top - 2f
-                    filterPanel.xAlignOffset = 5f
-                }
-            }
-            else{
-                val pad = if(activeFilterPanels[index-1] === existingFilters) 0f else 1f
-                filterPanel.position.belowLeft(activeFilterPanels[index-1], pad)
-            }
-        }
-
-        weaponsList.position.belowLeft(activeFilterPanels.last(), 6f)
-        noWeaponsOrNull?.position?.belowLeft(activeFilterPanels.last(), 6f)
-
-        setPickerPanelHeight(weaponPickerHeight, weaponDialogPanel, pickerPanelOffset)
-        innerWeaponPanel.yAlignOffset = weaponDialogPanel.top - innerWeaponPanel.top
-
-//        if (openedFromCampaign && RFSettings.enableWeaponSimulation!!) {
-//            addSimulationTrigger(mainElement) TODO: actually finally implement the weapon sim
-//        }
-    }
-*/
 
     fun weaponFiltered(weaponSpec: WeaponSpecAPI, filterData: WeaponFilterData): Boolean{
         with(filterData){
@@ -323,8 +225,8 @@ object FilterPanelCreator {
                 val searchByDesignType = RFSettings.searchByDesignType
 
                 val matchesName = FuzzySearch.fuzzyMatch(currentSearch, fighterSpec.wingName).second >= 75
-                val matchesDesignType = fighterSpec.sourceMod?.let { FuzzySearch.fuzzyMatch(currentSearch, it.name).second >= 80 } ?: false
-
+                val matchesDesignType = fighterSpec.sourceMod?.let { FuzzySearch.fuzzyMatch(currentSearch, it.name).second >= 80 } ?: false ||
+                        fighterSpec.variant?.hullSpec?.manufacturer?.let { FuzzySearch.fuzzyMatch(currentSearch, it).second >= 80 } ?: false
                 if (!matchesName && !searchByDesignType || searchByDesignType && !matchesName && !matchesDesignType) {
                     return true
                 }
