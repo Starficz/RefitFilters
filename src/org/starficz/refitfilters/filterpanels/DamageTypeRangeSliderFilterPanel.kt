@@ -10,15 +10,23 @@ import org.starficz.UIFramework.Font
 import org.starficz.UIFramework.anchorInTopLeftOfParent
 import org.starficz.UIFramework.anchorToPreviousMatchingCenter
 import org.starficz.UIFramework.onClick
-import org.starficz.refitfilters.FilterData
-import org.starficz.refitfilters.FilterPanelCreator
-import org.starficz.refitfilters.RFSettings
+import org.starficz.refitfilters.*
 import java.awt.Color
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
 
-fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Float): CustomPanelAPI {
+fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
+    width: Float,
+    height: Float,
+    pickerPanel: UIPanelAPI,
+    filterData: FilterData
+): CustomPanelAPI {
+
+    val minRange = if(filterData is WeaponFilterData) RFSettings.weaponMinRange else RFSettings.fighterMinRange
+    val maxRange = if(filterData is WeaponFilterData) RFSettings.weaponMaxRange else RFSettings.fighterMaxRange
+    val rangeIncrement = if(filterData is WeaponFilterData) RFSettings.weaponRangeIncrement else RFSettings.fighterRangeIncrement
+    val rangeTickSnapping = if(filterData is WeaponFilterData) RFSettings.weaponRangeTickSnapping else RFSettings.fighterRangeTickSnapping
 
     val kineticIconPath = "graphics/ui/icons/damagetype_kinetic.png"
     val highExplosiveIconPath = "graphics/ui/icons/damagetype_high_explosive.png"
@@ -34,22 +42,22 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
         val damageTypeGroup = ButtonGroup()
 
         AreaCheckbox("", keColor.darker(), keColor.darker().darker(), keColor,
-            height, height, flag = FilterData.kineticDamage, buttonGroup = damageTypeGroup) {
-            glowBrightness = if (FilterData.kineticDamage.isEnabled) 0.5f else 1f
+            height, height, flag = filterData.kineticDamage, buttonGroup = damageTypeGroup) {
+            glowBrightness = if (filterData.kineticDamage.isEnabled) 0.5f else 1f
 
             anchorInTopLeftOfParent()
 
             Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
-                addPara("Show kinetic weapons.", 0f)
+                addPara("Show kinetic damage.", 0f)
             }
-            onClick { FilterPanelCreator.filtersChanged() }
+            onClick { PickerPanelHelpers.filtersChanged(pickerPanel) }
         }
 
         Image(kineticIconPath, height, height) {
 
             anchorToPreviousMatchingCenter()
 
-            if(FilterData.kineticDamage.isEnabled){
+            if(filterData.kineticDamage.isEnabled){
                 sprite.setAdditiveBlend()
                 sprite.alphaMult = 0.9f
                 sprite.color = keColor
@@ -61,21 +69,21 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
         }
 
         AreaCheckbox("", heColor.darker(), heColor.darker().darker(), heColor,
-            height, height, flag = FilterData.heDamage, buttonGroup = damageTypeGroup) {
+            height, height, flag = filterData.heDamage, buttonGroup = damageTypeGroup) {
 
-            glowBrightness = if (FilterData.heDamage.isEnabled) 0.5f else 1f
+            glowBrightness = if (filterData.heDamage.isEnabled) 0.5f else 1f
 
             anchorRightOfPreviousMatchingTop(1f)
 
             Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
-                addPara("Show high explosive weapons.", 0f)
+                addPara("Show high explosive damage.", 0f)
             }
-            onClick { FilterPanelCreator.filtersChanged() }
+            onClick { PickerPanelHelpers.filtersChanged(pickerPanel) }
         }
         Image(highExplosiveIconPath, height, height) {
             anchorToPreviousMatchingCenter()
 
-            if(FilterData.heDamage.isEnabled){
+            if(filterData.heDamage.isEnabled){
                 sprite.setAdditiveBlend()
                 sprite.alphaMult = 0.9f
                 sprite.color = heColor
@@ -87,20 +95,20 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
         }
 
         AreaCheckbox("", energyColor.darker(), energyColor.darker().darker(), energyColor,
-            height, height, flag = FilterData.energyDamage, buttonGroup = damageTypeGroup) {
-            glowBrightness = if (FilterData.energyDamage.isEnabled) 0.5f else 1f
+            height, height, flag = filterData.energyDamage, buttonGroup = damageTypeGroup) {
+            glowBrightness = if (filterData.energyDamage.isEnabled) 0.5f else 1f
 
             anchorRightOfPreviousMatchingMid(1f)
 
             Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
-                addPara("Show energy weapons.", 0f)
+                addPara("Show energy damage.", 0f)
             }
-            onClick { FilterPanelCreator.filtersChanged() }
+            onClick { PickerPanelHelpers.filtersChanged(pickerPanel) }
         }
         Image(energyIconPath, height, height) {
             anchorToPreviousMatchingCenter()
 
-            if(FilterData.energyDamage.isEnabled){
+            if(filterData.energyDamage.isEnabled){
                 sprite.setAdditiveBlend()
                 sprite.alphaMult = 0.9f
                 sprite.color = energyColor
@@ -112,20 +120,20 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
         }
 
         AreaCheckbox("", fragColor.darker(), fragColor.darker().darker(), fragColor,
-            height, height, flag = FilterData.fragDamage, buttonGroup = damageTypeGroup) {
-            glowBrightness = if (FilterData.fragDamage.isEnabled) 0.5f else 1f
+            height, height, flag = filterData.fragDamage, buttonGroup = damageTypeGroup) {
+            glowBrightness = if (filterData.fragDamage.isEnabled) 0.5f else 1f
 
             anchorRightOfPreviousMatchingMid(1f)
 
             Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
-                addPara("Show fragmentation weapons.", 0f)
+                addPara("Show fragmentation damage.", 0f)
             }
-            onClick { FilterPanelCreator.filtersChanged() }
+            onClick { PickerPanelHelpers.filtersChanged(pickerPanel) }
         }
         Image(fragmentationIconPath, height, height) {
             anchorToPreviousMatchingCenter()
 
-            if(FilterData.fragDamage.isEnabled){
+            if(filterData.fragDamage.isEnabled){
                 sprite.setAdditiveBlend()
                 sprite.alphaMult = 0.9f
                 sprite.color = fragColor
@@ -144,8 +152,15 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
         CustomPanel(right-previousComponent!!.right, height) { PanelPlugin ->
             anchorRightOfPreviousMatchingMid(0f)
 
-            var lowerRange = FilterData.lowerRange
-            var upperRange = FilterData.upperRange
+            Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE, 370f){
+                addPara("Filters based on non-modified base range.", 0f)
+                addPara("Click anywhere within the slider to move the nearest point.", 0f)
+                addPara("Setting the maximum to $maxRange makes the upper limit infinite.",
+                    0f, Misc.getTextColor(), Misc.getHighlightColor(), "$maxRange")
+            }
+
+            var lowerRange = filterData.lowerRange
+            var upperRange = filterData.upperRange
 
             var lowerNodeHovered = false
             var upperNodeHovered = false
@@ -155,7 +170,6 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
             val lineDarkColor = lineBrightColor.darker().darker()
 
             val pixelPerfect = true
-            val snapToTicks = RFSettings.rangeTickSnapping
 
             val minBarRightPad = 18f
             val minBarLeftPad = 12f
@@ -165,9 +179,9 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
             val tickHeight = 5f
             val nodeSize = 4f
 
-            val numOfTicks = ((RFSettings.maxRange - RFSettings.minRange) / RFSettings.rangeIncrement)
-            val maxSliderRange = RFSettings.minRange + numOfTicks* RFSettings.rangeIncrement
-            val sliderTickRanges = (0..numOfTicks).map { it* RFSettings.rangeIncrement + RFSettings.minRange }
+            val numOfTicks = ((maxRange - minRange) / rangeIncrement)
+            val maxSliderRange = minRange + numOfTicks*rangeIncrement
+            val sliderTickRanges = (0..numOfTicks).map { it*rangeIncrement + minRange }
 
             val tickSpacing = (this.width - minBarLeftPad - minBarRightPad - tickThickness) / numOfTicks.toFloat()
             val tickXOffsets = if (pixelPerfect) (0..numOfTicks).map { it*tickSpacing.toInt() }
@@ -175,34 +189,27 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
 
             fun mapRangeToXOffset(range: Float): Float {
                 // map the range from min/max ranges to min/max xPos
-                val rangeXOffset: Float = range.linMap(
-                    RFSettings.minRange, maxSliderRange,
-                    tickXOffsets.first(), tickXOffsets.last())
+                val rangeXOffset: Float = range.linMap(minRange, maxSliderRange, tickXOffsets.first(), tickXOffsets.last())
 
                 // snap xPos to the closest tick if that setting is on
                 val nodeSnappedXOffset = tickXOffsets.minByOrNull { abs(rangeXOffset - it) }!!.toFloat()
 
-                return if (snapToTicks) nodeSnappedXOffset else rangeXOffset
+                return if (rangeTickSnapping) nodeSnappedXOffset else rangeXOffset
             }
 
             fun mapXPosToRange(xPos: Float): Float {
                 val nodeStartCenterXPos = left + minBarLeftPad + tickThickness/2
                 // map the range from min/max xPos to min/max range
                 val range: Float = xPos.linMap(tickXOffsets.first() + nodeStartCenterXPos,
-                    tickXOffsets.last() + nodeStartCenterXPos, RFSettings.minRange, maxSliderRange)
+                    tickXOffsets.last() + nodeStartCenterXPos, minRange, maxSliderRange)
 
                 // snap range to the closest tick if that setting is on
                 val snappedRange = sliderTickRanges.minByOrNull { abs(range - it) }!!
 
-                return if (snapToTicks) snappedRange.toFloat() else range
+                return if (rangeTickSnapping) snappedRange.toFloat() else range
             }
 
             with(PanelPlugin){
-                Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE, 380f){
-                    addPara("Filters weapons based on their non-modified base range. Click anywhere within the slider to move the nearest point. " +
-                            "Setting the maximum to ${RFSettings.maxRange} makes the upper limit infinite.",
-                        0f, Misc.getTextColor(), Misc.getHighlightColor(), "${RFSettings.maxRange}")
-                }
                 renderBelow { alphaMult ->
                     glColor(Color.BLACK, alphaMult)
                     GL11.glRectf(left, bottom-4, right, top)
@@ -278,19 +285,19 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(width: Float, height: Floa
                         upperRange = mapXPosToRange(event.x.toFloat())
                     }
 
-                    if(abs(FilterData.upperRange - upperRange) > RFSettings.rangeIncrement /4 ||
-                        abs(FilterData.lowerRange - lowerRange) > RFSettings.rangeIncrement /4) {
-                        if (snapToTicks) Global.getSoundPlayer().playUISound("ui_number_scrolling", 1f, 0.8f)
-                        FilterData.lowerRange = lowerRange
-                        FilterData.upperRange = upperRange
-                        FilterPanelCreator.filtersChanged()
+                    if(abs(filterData.upperRange - upperRange) > rangeIncrement /4 ||
+                        abs(filterData.lowerRange - lowerRange) > rangeIncrement /4) {
+                        if (rangeTickSnapping) Global.getSoundPlayer().playUISound("ui_number_scrolling", 1f, 0.8f)
+                        filterData.lowerRange = lowerRange
+                        filterData.upperRange = upperRange
+                        PickerPanelHelpers.filtersChanged(pickerPanel)
                     }
                 }
                 inputCaptureBottomPad = 4f
             }
 
             val startingTickXPos = minBarLeftPad + tickThickness/2 - 1
-            val minRangeString = RFSettings.minRange.let { if (it < 10000) it.toString() else "${it / 1000}K" }
+            val minRangeString = minRange.let { if (it < 10000) it.toString() else "${it / 1000}K" }
             Text(minRangeString, Font.VICTOR_14, Misc.getTextColor()) {
                 anchorInTopLeftOfParent(startingTickXPos - position.width/2, 0f)
             }

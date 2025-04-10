@@ -2,6 +2,7 @@ package org.starficz.refitfilters.filterpanels
 
 import com.fs.starfarer.api.Global
 import com.fs.starfarer.api.input.InputEventAPI
+import com.fs.starfarer.api.ui.ButtonAPI
 import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.TooltipMakerAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
@@ -12,29 +13,38 @@ import org.lwjgl.input.Keyboard
 import org.lwjgl.input.Mouse
 import org.lwjgl.opengl.GL11
 import org.starficz.UIFramework.*
-import org.starficz.UIFramework.Font
-import org.starficz.UIFramework.anchorInLeftMiddleOfParent
-import org.starficz.UIFramework.anchorRightOfPreviousMatchingMid
-import org.starficz.UIFramework.onClick
+import org.starficz.UIFramework.ReflectionUtils.getFieldsMatching
+import org.starficz.UIFramework.ReflectionUtils.getFieldsWithMethodsMatching
 import org.starficz.refitfilters.FilterData
-import org.starficz.refitfilters.FilterDataClass
-import org.starficz.refitfilters.FilterPanelCreator
+import org.starficz.refitfilters.PickerPanelHelpers
 import org.starficz.refitfilters.RFSettings
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 
 
-fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPanelAPI {
+fun UIPanelAPI.createSearchBarFilterPanel(
+    width: Float,
+    height: Float,
+    pickerPanel: UIPanelAPI,
+    filterData: FilterData
+): CustomPanelAPI {
 
     val brightColor = Global.getSettings().basePlayerColor
     val baseColor = brightColor.darker()
     val bgColor = baseColor.darker().darker()
 
-    fun resetFilters() {
-        if (FilterData != FilterDataClass()) {
-            FilterData = FilterDataClass()
-            FilterPanelCreator.filtersChanged()
-        }
+    fun resetFilters(pickerPanel: UIPanelAPI) {
+        val filterButtonPanel = pickerPanel.getFieldsWithMethodsMatching("setChecked", numOfMethodParams = 2)
+            .firstOrNull()?.get(pickerPanel)
+
+        val filterButtons = filterButtonPanel?.getFieldsMatching(type = List::class.java)
+            ?.mapNotNull { it.get(filterButtonPanel) as? List<*> }
+            ?.firstOrNull { it.any { item -> item is ButtonAPI } } as List<ButtonAPI>?
+
+        filterButtons?.forEach { if(it.isEnabled && !it.isChecked) it.isChecked = true }
+        filterData.reset()
+
+        PickerPanelHelpers.filtersChanged(pickerPanel)
     }
 
     return CustomPanel(width, height) {
@@ -44,7 +54,10 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
                 addPara("Reset all filters. You can also press CTRL + R or the Middle Mouse Button to do the same.",
                     0f, Misc.getTextColor(), Misc.getHighlightColor(), "CTRL + R", "Middle Mouse Button")
             }
-            onClick { resetFilters() }
+            onClick {
+                resetFilters(pickerPanel)
+                this.isChecked = true
+            }
         }
 
         // Custom TextField instead of vanilla TextField as a vanilla's implementation needs focus to work,
@@ -54,7 +67,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
         CustomPanel(right-previousComponent!!.right-1, height) { plugin ->
             anchorRightOfPreviousMatchingMid(1f)
 
-            val searchText = Text(FilterData.currentSearch + " ", color = Misc.getBasePlayerColor()){
+            val searchText = Text(filterData.currentSearch + " ", color = Misc.getBasePlayerColor()){
                 anchorInLeftMiddleOfParent(5f)
             }
 
@@ -91,10 +104,10 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
                     blinkInterval.advance(amount)
                     if (blinkInterval.intervalElapsed()) {
                         blink = !blink
-                        if (blink) searchText.text = "${FilterData.currentSearch} "
-                        else searchText.text = "${FilterData.currentSearch}|"
+                        if (blink) searchText.text = "${filterData.currentSearch} "
+                        else searchText.text = "${filterData.currentSearch}|"
                     }
-                    if (Mouse.isButtonDown(2)) { resetFilters() }
+                    if (Mouse.isButtonDown(2)) { resetFilters(pickerPanel) }
                 }
 
                 fun appendCharIfPossible(char: Char): Boolean{
@@ -108,7 +121,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
 
                     if (isValidChar && hasRoomToAppend){
                         playSound("ui_typer_type")
-                        FilterData.currentSearch += char
+                        filterData.currentSearch += char
                         return true
                     } else{
                         playSound("ui_typer_buzz")
@@ -117,34 +130,34 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
                 }
 
                 fun deleteCharIfPossible(event: InputEventAPI){
-                    if (FilterData.currentSearch.isNotEmpty()) {
+                    if (filterData.currentSearch.isNotEmpty()) {
                         event.consume()
                         playSound("ui_typer_type")
-                        FilterData.currentSearch = FilterData.currentSearch.dropLast(1)
-                        FilterPanelCreator.filtersChanged()
+                        filterData.currentSearch = filterData.currentSearch.dropLast(1)
+                        PickerPanelHelpers.filtersChanged(pickerPanel)
                     }
                 }
 
                 fun deleteLastWord(event: InputEventAPI) {
-                    if (FilterData.currentSearch.isNotEmpty()) {
+                    if (filterData.currentSearch.isNotEmpty()) {
                         event.consume()
                         playSound("ui_typer_type")
-                        val trimmed = FilterData.currentSearch.trim()
+                        val trimmed = filterData.currentSearch.trim()
                         val words = trimmed.split(Regex("\\s+"))
-                        FilterData.currentSearch = when {
+                        filterData.currentSearch = when {
                             words.size <= 1 -> ""
                             else -> words.dropLast(1).joinToString(" ")
                         }
-                        FilterPanelCreator.filtersChanged()
+                        PickerPanelHelpers.filtersChanged(pickerPanel)
                     }
                 }
 
                 fun deleteAll(event: InputEventAPI) {
-                    if (FilterData.currentSearch.isNotEmpty()) {
+                    if (filterData.currentSearch.isNotEmpty()) {
                         event.consume()
                         playSound("ui_typer_type")
-                        FilterData.currentSearch = ""
-                        FilterPanelCreator.filtersChanged()
+                        filterData.currentSearch = ""
+                        PickerPanelHelpers.filtersChanged(pickerPanel)
                     }
                 }
 
@@ -161,18 +174,18 @@ fun UIPanelAPI.createSearchBarFilterPanel(width: Float, height: Float): CustomPa
                             appendCharIfPossible(char)
                         }
                         event.consume()
-                        FilterPanelCreator.filtersChanged()
+                        PickerPanelHelpers.filtersChanged(pickerPanel)
                     }
                     else if (event.eventValue == Keyboard.KEY_R && event.isCtrlDown){
                         event.consume()
-                        resetFilters()
+                        resetFilters(pickerPanel)
                     }
                     else if (!event.isCtrlDown && !event.isAltDown && event.eventValue !in (2..11) &&
                         event.eventValue != Keyboard.KEY_RETURN && event.eventValue != Keyboard.KEY_NUMPADENTER)
                     {
                         if(appendCharIfPossible(event.eventChar)){
                             event.consume()
-                            FilterPanelCreator.filtersChanged()
+                            PickerPanelHelpers.filtersChanged(pickerPanel)
                         }
                     }
                 }

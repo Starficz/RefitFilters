@@ -16,6 +16,6 @@ class CombatUIAdderScript : BaseEveryFrameCombatPlugin() {
 
         val core = state.invoke("getScreenPanel") as? UIPanelAPI ?: return
 
-        FilterPanelCreator.modifyFilterPanel(core, openedFromCampaign = false, docked = false)
+        FilterPanelCreator.modifyFilterPanels(core, openedFromCampaign = false, docked = false)
     }
 }

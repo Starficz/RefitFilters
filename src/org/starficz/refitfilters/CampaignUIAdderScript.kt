@@ -37,6 +37,6 @@ class CampaignUIAdderScript : EveryFrameScript{
         }
         else { state.invoke("getCore") as? UIPanelAPI} ?: return
 
-        FilterPanelCreator.modifyFilterPanel(core, true, docked)
+        FilterPanelCreator.modifyFilterPanels(core, true, docked)
     }
 }
