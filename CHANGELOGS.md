@@ -1,3 +1,6 @@
+## Version 3.1.1
+- Pinned down and fixed CTD on some machines. *Thanks ANU (anulackk) on Discord!*
+
 ## Version 3.1.0
 - Added support for Fighter Wings
 - Fixed Height position issues

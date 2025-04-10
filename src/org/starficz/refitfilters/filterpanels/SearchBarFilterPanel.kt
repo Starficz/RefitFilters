@@ -43,8 +43,6 @@ fun UIPanelAPI.createSearchBarFilterPanel(
 
         filterButtons?.forEach { if(it.isEnabled && !it.isChecked) it.isChecked = true }
         filterData.reset()
-
-        PickerPanelHelpers.filtersChanged(pickerPanel)
     }
 
     return CustomPanel(width, height) {
@@ -57,6 +55,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(
             onClick {
                 resetFilters(pickerPanel)
                 this.isChecked = true
+                PickerPanelHelpers.filtersChanged(pickerPanel)
             }
         }
 
@@ -99,6 +98,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(
 
                 val blinkInterval = IntervalUtil(0.5f, 0.5f)
                 var blink = false
+                var needsRefresh = false
 
                 advance { amount ->
                     blinkInterval.advance(amount)
@@ -107,7 +107,16 @@ fun UIPanelAPI.createSearchBarFilterPanel(
                         if (blink) searchText.text = "${filterData.currentSearch} "
                         else searchText.text = "${filterData.currentSearch}|"
                     }
-                    if (Mouse.isButtonDown(2)) { resetFilters(pickerPanel) }
+                    if (Mouse.isButtonDown(2)) {
+                        resetFilters(pickerPanel)
+                        needsRefresh = true
+                    }
+                    // need to defer refresh to here as refreshing in plugin event listeners directly
+                    // causes some weird race condition crash only on some machines
+                    if (needsRefresh) {
+                        needsRefresh = false
+                        PickerPanelHelpers.filtersChanged(pickerPanel)
+                    }
                 }
 
                 fun appendCharIfPossible(char: Char): Boolean{
@@ -122,6 +131,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(
                     if (isValidChar && hasRoomToAppend){
                         playSound("ui_typer_type")
                         filterData.currentSearch += char
+                        needsRefresh = true
                         return true
                     } else{
                         playSound("ui_typer_buzz")
@@ -134,7 +144,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(
                         event.consume()
                         playSound("ui_typer_type")
                         filterData.currentSearch = filterData.currentSearch.dropLast(1)
-                        PickerPanelHelpers.filtersChanged(pickerPanel)
+                        needsRefresh = true
                     }
                 }
 
@@ -148,7 +158,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(
                             words.size <= 1 -> ""
                             else -> words.dropLast(1).joinToString(" ")
                         }
-                        PickerPanelHelpers.filtersChanged(pickerPanel)
+                        needsRefresh = true
                     }
                 }
 
@@ -157,7 +167,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(
                         event.consume()
                         playSound("ui_typer_type")
                         filterData.currentSearch = ""
-                        PickerPanelHelpers.filtersChanged(pickerPanel)
+                        needsRefresh = true
                     }
                 }
 
@@ -174,18 +184,17 @@ fun UIPanelAPI.createSearchBarFilterPanel(
                             appendCharIfPossible(char)
                         }
                         event.consume()
-                        PickerPanelHelpers.filtersChanged(pickerPanel)
                     }
                     else if (event.eventValue == Keyboard.KEY_R && event.isCtrlDown){
                         event.consume()
                         resetFilters(pickerPanel)
+                        needsRefresh = true
                     }
                     else if (!event.isCtrlDown && !event.isAltDown && event.eventValue !in (2..11) &&
                         event.eventValue != Keyboard.KEY_RETURN && event.eventValue != Keyboard.KEY_NUMPADENTER)
                     {
                         if(appendCharIfPossible(event.eventChar)){
                             event.consume()
-                            PickerPanelHelpers.filtersChanged(pickerPanel)
                         }
                     }
                 }
