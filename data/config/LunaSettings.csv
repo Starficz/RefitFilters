@@ -6,7 +6,7 @@ refitfilters_searchbarBehaviour,Searchbar behaviour,Radio,"Sort & Filter","Sort,
 [Sort] - Sort the list based on the best match.
 [Filter] - Remove entries that do not match the prompt enough.
 [Sort & Filter] - Combined behaviour of the above.",,,
-refitfilters_searchByDesignType,Search by design type,Boolean,true,,Enables the search bar to also filter by design type/mod name in addition to weapon name. Does not count for sorting and as such is [only in effect if the searchbar has filtering enabled.],,,
+refitfilters_searchByDesignType,Filter Search by Design Type,Boolean,true,,Enables the search bar to also filter by design type/mod name in addition to weapon name.,,,
 refitfilters_resetButtonSearchBarPanelOrder,Reset Button/Search Bar Filter Location,Int,1,,"Location of the Reset Button/Search Bar Filter Panel, 1 being the top, 4 at the bottom.",1,4,
 refitfilters_vanillaWeaponAvailabilityWeaponSlotPanelOrder,Availability/Weapon Slot Filter Location,Int,2,,"Location of the vanilla Weapon Availability/Weapon Slot filter Panel, 1 being the top, 4 at the bottom.",1,4,
 refitfilters_weaponTypePanelOrder,Weapon Type Filter Location,Int,3,,"Location of the Weapon Type filter Panel, 1 being the top, 4 at the bottom. 0 to disable.",0,4,
