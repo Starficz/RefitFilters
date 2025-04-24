@@ -152,8 +152,7 @@ object FuzzySearch {
                     if (neighbour != neighbour.uppercaseChar() && curr != curr.lowercaseChar()) {
                         outScore += Constants.CAMEL_BONUS
                     }
-                    val isNeighbourSeparator = neighbour == '_' || neighbour == ' '
-                    if (isNeighbourSeparator) {
+                    if (!neighbour.isLetter()) {
                         outScore += Constants.SEPARATOR_BONUS
                     }
                 } else {

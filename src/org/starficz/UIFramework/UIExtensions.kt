@@ -9,7 +9,6 @@ import com.fs.starfarer.api.ui.*
 import com.fs.starfarer.api.ui.TooltipMakerAPI.TooltipLocation
 import com.fs.starfarer.ui.impl.StandardTooltipV2Expandable
 import org.starficz.UIFramework.ReflectionUtils.getMethodsMatching
-import org.starficz.UIFramework.ReflectionUtils.hasMethodOfName
 import org.starficz.UIFramework.ReflectionUtils.invoke
 import org.starficz.UIFramework.ReflectionUtils.set
 import java.awt.Color
@@ -159,7 +158,7 @@ internal fun UIComponentAPI.anchorInRightMiddleOfParent(xPad: Float = 0f) {
 }
 internal fun UIComponentAPI.anchorInCenterOfParent() {
     val floatType = Float::class.javaPrimitiveType!!
-    val paramTypes = listOf(this.position::class.java,
+    val paramTypes = listOf<Class<*>?>(this.position::class.java,
         floatType, floatType, floatType, floatType, floatType, floatType).toTypedArray()
 
     this.position.getMethodsMatching("relativeTo", parameterTypes = paramTypes)[0]
@@ -253,11 +252,11 @@ internal fun UIPanelAPI.getChildrenNonCopy(): List<UIComponentAPI> {
 }
 
 internal fun UIPanelAPI.findChildWithMethod(methodName: String): UIComponentAPI? {
-    return getChildrenCopy().find { it.hasMethodOfName(methodName) }
+    return getChildrenCopy().find { it.getMethodsMatching(methodName).isNotEmpty() }
 }
 
 internal fun UIPanelAPI.allChildsWithMethod(methodName: String): List<UIComponentAPI> {
-    return getChildrenCopy().filter { it.hasMethodOfName(methodName) }
+    return getChildrenCopy().filter { it.getMethodsMatching(methodName).isNotEmpty() }
 }
 
 internal fun UIPanelAPI.clearChildren() {

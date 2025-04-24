@@ -7,9 +7,9 @@ import com.fs.starfarer.api.loading.WeaponSpecAPI
 import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
 import com.fs.starfarer.api.util.Misc
-import org.starficz.UIFramework.ReflectionUtils.hasMethodOfName
 import org.starficz.UIFramework.ReflectionUtils.invoke
 import org.starficz.UIFramework.*
+import org.starficz.UIFramework.ReflectionUtils.getMethodsMatching
 import org.starficz.UIFramework.allChildsWithMethod
 import org.starficz.UIFramework.getChildrenCopy
 import org.starficz.refitfilters.PickerPanelHelpers.setPickerPanelHeight
@@ -63,7 +63,7 @@ object FilterPanelCreator {
         val uiElements = innerPanel.getChildrenCopy()
         if (uiElements.any { it is CustomPanelAPI && it.plugin is ExtendableCustomUIPanelPlugin }) return // return if added
 
-        val existingFiltersIndex = uiElements.indexOfFirst { it.hasMethodOfName("addItem") }
+        val existingFiltersIndex = uiElements.indexOfFirst { it.getMethodsMatching("addItem").isNotEmpty() }
 
         val currentlySelected = uiElements.getOrNull(existingFiltersIndex-2)
         val currentlyMountedText = uiElements.getOrNull(existingFiltersIndex-1)
@@ -195,9 +195,9 @@ object FilterPanelCreator {
             if (RFSettings.searchBarBehaviour != "Sort" && currentSearch.isNotEmpty()) {
                 val searchByDesignType = RFSettings.searchByDesignType
 
-                val matchesName = FuzzySearch.fuzzyMatch(currentSearch, weaponSpec.weaponName).second >= 75
-                val matchesDesignType = FuzzySearch.fuzzyMatch(currentSearch, weaponSpec.manufacturer).second >= 80 ||
-                    weaponSpec.sourceMod?.let { FuzzySearch.fuzzyMatch(currentSearch, it.name).second >= 80 } ?: false
+                val matchesName = FuzzySearch.fuzzyMatch(currentSearch, weaponSpec.weaponName).second >= 110
+                val matchesDesignType = FuzzySearch.fuzzyMatch(currentSearch, weaponSpec.manufacturer).second >= 140 ||
+                    weaponSpec.sourceMod?.let { FuzzySearch.fuzzyMatch(currentSearch, it.name).second >= 140 } ?: false
 
                 if (!matchesName && !searchByDesignType || searchByDesignType && !matchesName && !matchesDesignType) {
                     return true

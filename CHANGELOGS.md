@@ -1,3 +1,6 @@
+## Version 3.1.2
+- Updated filter thresholds to be more strict for fuzzy matching
+
 ## Version 3.1.1
 - Pinned down and fixed CTD on some machines. *Thanks ANU (anulackk) on Discord!*
 
