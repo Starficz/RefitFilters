@@ -32,7 +32,6 @@ object FilterPanelCreator {
     val rowWidth = 377f
     val filterRowHeight = 25f
     val itemRowHeight = 78f
-    lateinit var pickerPanel: UIPanelAPI
 
     val weaponFilterData = WeaponFilterData()
     val fighterFilterData = FighterFilterData()
@@ -53,10 +52,10 @@ object FilterPanelCreator {
             PickerPanelType.Fighters -> fighterFilterData
         }
 
-        pickerPanel = coreUI.allChildsWithMethod(panelMethodName).filter { wdp ->
+        val pickerPanel = coreUI.allChildsWithMethod(panelMethodName).firstOrNull { wdp ->
             val innerPanel = wdp.invoke("getInnerPanel") as? UIPanelAPI
             innerPanel?.getChildrenCopy()?.any { it is CustomPanelAPI && it.plugin is ExtendableCustomUIPanelPlugin } == false
-        }.firstOrNull() as? UIPanelAPI ?: return
+        } as? UIPanelAPI ?: return
 
         val innerPanel = pickerPanel.invoke("getInnerPanel") as? UIPanelAPI ?: return
 
