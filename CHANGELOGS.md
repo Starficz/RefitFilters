@@ -1,3 +1,6 @@
+## Version 3.1.3
+- Fixed memory leak
+
 ## Version 3.1.2
 - Updated filter thresholds to be more strict for fuzzy matching
 
