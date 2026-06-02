@@ -1,66 +1,65 @@
 package org.starficz.refitfilters
 
-import org.starficz.UIFramework.Flag
+import org.starficz.staruiframework.UIState
 
 abstract class FilterData(
-    var kineticDamage: Flag = Flag(),
-    var heDamage: Flag = Flag(),
-    var energyDamage: Flag = Flag(),
-    var fragDamage: Flag = Flag(),
-    var lowerRange: Float,
-    var upperRange: Float,
-    var currentSearch: String = ""
+    val kineticDamage: UIState<Boolean> = UIState(true),
+    val heDamage: UIState<Boolean> = UIState(true),
+    val energyDamage: UIState<Boolean> = UIState(true),
+    val fragDamage: UIState<Boolean> = UIState(true),
+    val lowerRange: UIState<Float>,
+    val upperRange: UIState<Float>,
+    val currentSearch: UIState<String> = UIState("")
 ) {
     protected fun resetCommonFields(defaultLower: Float, defaultUpper: Float) {
-        kineticDamage = Flag()
-        heDamage = Flag()
-        energyDamage = Flag()
-        fragDamage = Flag()
-        lowerRange = defaultLower
-        upperRange = defaultUpper
-        currentSearch = ""
+        kineticDamage.value = true
+        heDamage.value = true
+        energyDamage.value = true
+        fragDamage.value = true
+        lowerRange.value = defaultLower
+        upperRange.value = defaultUpper
+        currentSearch.value = ""
     }
 
     abstract fun reset()
 }
 
 class WeaponFilterData: FilterData(
-    lowerRange = RFSettings.weaponMinRange.toFloat(),
-    upperRange = RFSettings.weaponMaxRange.toFloat()
+    lowerRange = UIState(RFSettings.weaponMinRange.toFloat()),
+    upperRange = UIState(RFSettings.weaponMaxRange.toFloat())
 ) {
-    var projectileWeapons: Flag = Flag()
-    var beamWeapons: Flag = Flag()
-    var pdWeapons: Flag = Flag()
-    var nonpdWeapons: Flag = Flag()
-    var ammoWeapons: Flag = Flag()
-    var nonAmmoWeapons: Flag = Flag()
+    val projectileWeapons = UIState(true)
+    val beamWeapons = UIState(true)
+    val pdWeapons = UIState(true)
+    val nonpdWeapons = UIState(true)
+    val ammoWeapons = UIState(true)
+    val nonAmmoWeapons = UIState(true)
 
     override fun reset() {
         resetCommonFields(RFSettings.weaponMinRange.toFloat(), RFSettings.weaponMaxRange.toFloat())
-        projectileWeapons = Flag()
-        beamWeapons = Flag()
-        pdWeapons = Flag()
-        nonpdWeapons = Flag()
-        ammoWeapons = Flag()
-        nonAmmoWeapons = Flag()
+        projectileWeapons.value = true
+        beamWeapons.value = true
+        pdWeapons.value = true
+        nonpdWeapons.value = true
+        ammoWeapons.value = true
+        nonAmmoWeapons.value = true
     }
 }
 
 class FighterFilterData: FilterData(
-    lowerRange = RFSettings.fighterMinRange.toFloat(),
-    upperRange = RFSettings.fighterMaxRange.toFloat()
+    lowerRange = UIState(RFSettings.fighterMinRange.toFloat()),
+    upperRange = UIState(RFSettings.fighterMaxRange.toFloat())
 ) {
-    var supportWing: Flag = Flag()
-    var fighterWing: Flag = Flag()
-    var bomberWing: Flag = Flag()
-    var interceptorWing: Flag = Flag()
+    val supportWing = UIState(true)
+    val fighterWing = UIState(true)
+    val bomberWing = UIState(true)
+    val interceptorWing = UIState(true)
 
     override fun reset() {
         resetCommonFields(RFSettings.fighterMinRange.toFloat(), RFSettings.fighterMaxRange.toFloat())
-        supportWing = Flag()
-        fighterWing = Flag()
-        bomberWing = Flag()
-        interceptorWing = Flag()
+        supportWing.value = true
+        fighterWing.value = true
+        bomberWing.value = true
+        interceptorWing.value = true
     }
 }
-

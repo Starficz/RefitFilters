@@ -1,22 +1,17 @@
 package org.starficz.refitfilters.filterpanels
 
 import com.fs.starfarer.api.Global
+import com.fs.starfarer.api.ui.Alignment
 import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.TooltipMakerAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
-import org.starficz.UIFramework.*
-import org.starficz.UIFramework.ButtonGroup
-import org.starficz.UIFramework.Font
-import org.starficz.UIFramework.anchorInTopLeftOfParent
-import org.starficz.UIFramework.anchorRightOfPreviousMatchingMid
-import org.starficz.UIFramework.onClick
+import org.starficz.staruiframework.*
 import org.starficz.refitfilters.PickerPanelHelpers
 import org.starficz.refitfilters.WeaponFilterData
 
-
 fun UIPanelAPI.createWeaponTypesFilterPanel(
-    width: Float,
-    height: Float,
+    targetWidth: Float,
+    targetHeight: Float,
     pickerPanel: UIPanelAPI,
     filterData: WeaponFilterData
 ): CustomPanelAPI {
@@ -25,76 +20,58 @@ fun UIPanelAPI.createWeaponTypesFilterPanel(
     val baseColor = brightColor.darker()
     val bgColor = baseColor.darker().darker()
 
-    return CustomPanel(width, height) { plugin ->
+    return HorizontalStackLayout(spacing = 1f, alignment = Alignment.LMID) {
+        var needsRefresh = false
+        Plugin {
+            advance {
+                if (needsRefresh) {
+                    PickerPanelHelpers.filtersChanged(pickerPanel)
+                    needsRefresh = false
+                }
+            }
+        }
+
+        filterData.projectileWeapons.onChange { needsRefresh = true }
+        filterData.beamWeapons.onChange { needsRefresh = true }
+        filterData.pdWeapons.onChange { needsRefresh = true }
+        filterData.nonpdWeapons.onChange { needsRefresh = true }
+        filterData.ammoWeapons.onChange { needsRefresh = true }
+        filterData.nonAmmoWeapons.onChange { needsRefresh = true }
+
+
         val beamGroup = ButtonGroup()
         val pdGroup = ButtonGroup()
         val ammoGroup = ButtonGroup()
         val buttonWidth = 62f
 
-        AreaCheckbox("PROJ", baseColor, bgColor, brightColor, buttonWidth, height,
-            font = Font.VICTOR_14, flag = filterData.projectileWeapons, buttonGroup = beamGroup) {
-
-            anchorInTopLeftOfParent()
-
-            Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
-                addPara("Show projectile weapons.", 0f)
-            }
-            onClick { PickerPanelHelpers.filtersChanged(pickerPanel) }
+        AreaCheckbox(buttonWidth, targetHeight, "PROJ", baseColor, bgColor, brightColor,
+            font = Font.VICTOR_14, bind = filterData.projectileWeapons, buttonGroup = beamGroup) {
+            Tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) { addPara("Show projectile weapons.", 0f) }
         }
 
-        AreaCheckbox("BEAM", baseColor, bgColor, brightColor, buttonWidth, height,
-            font = Font.VICTOR_14, flag = filterData.beamWeapons, buttonGroup = beamGroup) {
-
-            anchorRightOfPreviousMatchingMid(1f)
-
-            Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
-                addPara("Show beam weapons.", 0f)
-            }
-            onClick { PickerPanelHelpers.filtersChanged(pickerPanel) }
+        AreaCheckbox(buttonWidth, targetHeight, "BEAM", baseColor, bgColor, brightColor,
+            font = Font.VICTOR_14, bind = filterData.beamWeapons, buttonGroup = beamGroup) {
+            Tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) { addPara("Show beam weapons.", 0f) }
         }
 
-        AreaCheckbox("PD", baseColor, bgColor, brightColor, buttonWidth-10f, height,
-            font = Font.VICTOR_14, flag = filterData.pdWeapons, buttonGroup = pdGroup) {
-
-            anchorRightOfPreviousMatchingMid(1f)
-
-            Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
-                addPara("Show point defense weapons.", 0f)
-            }
-            onClick { PickerPanelHelpers.filtersChanged(pickerPanel) }
+        AreaCheckbox(buttonWidth - 10f, targetHeight, "PD", baseColor, bgColor, brightColor,
+            font = Font.VICTOR_14, bind = filterData.pdWeapons, buttonGroup = pdGroup) {
+            Tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) { addPara("Show point defense weapons.", 0f) }
         }
 
-        AreaCheckbox("NON-PD", baseColor, bgColor, brightColor, buttonWidth+10f, height,
-            font = Font.VICTOR_14, flag = filterData.nonpdWeapons, buttonGroup = pdGroup) {
-
-            anchorRightOfPreviousMatchingMid(1f)
-
-            Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
-                addPara("Show weapons that arnt point defense.", 0f)
-            }
-            onClick { PickerPanelHelpers.filtersChanged(pickerPanel) }
+        AreaCheckbox(buttonWidth + 10f, targetHeight, "NON-PD", baseColor, bgColor, brightColor,
+            font = Font.VICTOR_14, bind = filterData.nonpdWeapons, buttonGroup = pdGroup) {
+            Tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) { addPara("Show weapons that aren't point defense.", 0f) }
         }
 
-        AreaCheckbox("AMMO", baseColor, bgColor, brightColor, buttonWidth-10f, height,
-            font = Font.VICTOR_14, flag = filterData.ammoWeapons, buttonGroup = ammoGroup) {
-
-            anchorRightOfPreviousMatchingMid(1f)
-
-            Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
-                addPara("Show weapons that use ammo.", 0f)
-            }
-            onClick { PickerPanelHelpers.filtersChanged(pickerPanel) }
+        AreaCheckbox(buttonWidth - 10f, targetHeight, "AMMO", baseColor, bgColor, brightColor,
+            font = Font.VICTOR_14, bind = filterData.ammoWeapons, buttonGroup = ammoGroup) {
+            Tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) { addPara("Show weapons that use ammo.", 0f) }
         }
 
-        AreaCheckbox("NON-AMMO", baseColor, bgColor, brightColor, buttonWidth+10f, height,
-            font = Font.VICTOR_14, flag = filterData.nonAmmoWeapons, buttonGroup = ammoGroup) {
-
-            anchorRightOfPreviousMatchingMid(1f)
-
-            Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE,300f) {
-                addPara("Show weapons that don't use ammo.", 0f)
-            }
-            onClick { PickerPanelHelpers.filtersChanged(pickerPanel) }
+        AreaCheckbox(buttonWidth + 10f, targetHeight, "NON-AMMO", baseColor, bgColor, brightColor,
+            font = Font.VICTOR_14, bind = filterData.nonAmmoWeapons, buttonGroup = ammoGroup) {
+            Tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) { addPara("Show weapons that don't use ammo.", 0f) }
         }
     }
 }

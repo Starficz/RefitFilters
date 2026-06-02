@@ -3,10 +3,13 @@ package org.starficz.refitfilters
 import com.fs.starfarer.api.Global
 import com.fs.starfarer.api.ui.UIComponentAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
-import org.starficz.UIFramework.*
-import org.starficz.UIFramework.ReflectionUtils.get
-import org.starficz.UIFramework.ReflectionUtils.getFieldsMatching
-import org.starficz.UIFramework.ReflectionUtils.invoke
+import org.starficz.refitfilters.ReflectionUtils.get
+import org.starficz.refitfilters.ReflectionUtils.getFieldsMatching
+import org.starficz.refitfilters.ReflectionUtils.invoke
+import org.starficz.staruiframework.centerY
+import org.starficz.staruiframework.height
+import org.starficz.staruiframework.top
+import org.starficz.staruiframework.yAlignOffset
 
 object PickerPanelHelpers {
     fun filtersChanged(pickerPanel: UIPanelAPI){

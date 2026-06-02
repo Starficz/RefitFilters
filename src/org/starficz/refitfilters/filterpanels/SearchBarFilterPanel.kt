@@ -2,6 +2,7 @@ package org.starficz.refitfilters.filterpanels
 
 import com.fs.starfarer.api.Global
 import com.fs.starfarer.api.input.InputEventAPI
+import com.fs.starfarer.api.ui.Alignment
 import com.fs.starfarer.api.ui.ButtonAPI
 import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.TooltipMakerAPI
@@ -12,29 +13,27 @@ import org.lazywizard.lazylib.opengl.ColorUtils.glColor
 import org.lwjgl.input.Keyboard
 import org.lwjgl.input.Mouse
 import org.lwjgl.opengl.GL11
-import org.starficz.UIFramework.*
-import org.starficz.UIFramework.ReflectionUtils.getFieldsMatching
-import org.starficz.UIFramework.ReflectionUtils.getFieldsWithMethodsMatching
+import org.starficz.staruiframework.*
+import org.starficz.refitfilters.ReflectionUtils.getFieldsMatching
+import org.starficz.refitfilters.ReflectionUtils.getFieldsWithMethodsMatching
 import org.starficz.refitfilters.FilterData
 import org.starficz.refitfilters.PickerPanelHelpers
 import org.starficz.refitfilters.RFSettings
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 
-
 fun UIPanelAPI.createSearchBarFilterPanel(
-    width: Float,
-    height: Float,
+    targetWidth: Float,
+    targetHeight: Float,
     pickerPanel: UIPanelAPI,
     filterData: FilterData
 ): CustomPanelAPI {
-
     val brightColor = Global.getSettings().basePlayerColor
     val baseColor = brightColor.darker()
     val bgColor = baseColor.darker().darker()
 
     fun resetFilters(pickerPanel: UIPanelAPI) {
-        val filterButtonPanel = pickerPanel.getFieldsWithMethodsMatching("setChecked", numOfMethodParams = 2)
+        val filterButtonPanel = pickerPanel.getFieldsWithMethodsMatching(numOfMethodParams = 2, methodName = "setChecked")
             .firstOrNull()?.get(pickerPanel)
 
         val filterButtons = filterButtonPanel?.getFieldsMatching(type = List::class.java)
@@ -45,32 +44,43 @@ fun UIPanelAPI.createSearchBarFilterPanel(
         filterData.reset()
     }
 
-    return CustomPanel(width, height) {
-        AreaCheckbox("RESET FILTERS", baseColor, bgColor, brightColor, 125f, height, Font.VICTOR_14) {
+    return HorizontalStackLayout(spacing = 1f, alignment = Alignment.LMID, minWidth = targetWidth, minHeight = targetHeight) {
+
+        var needsRefresh = false
+        Plugin {
+            advance {
+                if (needsRefresh) {
+                    PickerPanelHelpers.filtersChanged(pickerPanel)
+                    needsRefresh = false
+                }
+            }
+        }
+
+        filterData.currentSearch.onChange { needsRefresh = true }
+
+        AreaCheckbox(125f, -1f, "RESET FILTERS", baseColor, bgColor, brightColor, font = Font.VICTOR_14) {
             isChecked = true
-            Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE, 300f) {
+            Tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) {
                 addPara("Reset all filters. You can also press CTRL + R or the Middle Mouse Button to do the same.",
                     0f, Misc.getTextColor(), Misc.getHighlightColor(), "CTRL + R", "Middle Mouse Button")
             }
             onClick {
                 resetFilters(pickerPanel)
                 this.isChecked = true
-                PickerPanelHelpers.filtersChanged(pickerPanel)
             }
         }
 
-        // Custom TextField instead of vanilla TextField as a vanilla's implementation needs focus to work,
-        // and having focus consumes all key presses, even escape. This makes the desired behaviour for this text field
-        // of always being active, but allows for exiting the weapon picker panel and filter hotkeys impossible.
-        // Also implements all the reset keys as this is a convenient place that already captures all input.
-        CustomPanel(right-previousComponent!!.right-1, height) { plugin ->
-            anchorRightOfPreviousMatchingMid(1f)
+        // neg width is flex
+        CustomPanel(-1f, -1f) {
 
-            val searchText = Text(filterData.currentSearch + " ", color = Misc.getBasePlayerColor()){
-                anchorInLeftMiddleOfParent(5f)
-            }
+            // Pass the anchor directly into the DSL element to avoid double-anchoring!
+            val searchText = Text(
+                text = "${filterData.currentSearch.value} ",
+                color = Misc.getBasePlayerColor(),
+                anchor = Anchor.inside.centerLeft.ofParent(xMargin = 5f)
+            )
 
-            Tooltip(TooltipMakerAPI.TooltipLocation.ABOVE, 450f){
+            Tooltip(450f, TooltipMakerAPI.TooltipLocation.ABOVE) {
                 val sortExtra = if (RFSettings.searchBarBehaviour == "Sort") "[x]" else ""
                 val filterExtra = if (RFSettings.searchBarBehaviour == "Filter") "[x]" else ""
                 val sortAndFilterExtra = if (RFSettings.searchBarBehaviour == "Sort & Filter") "[x]" else ""
@@ -88,86 +98,75 @@ fun UIPanelAPI.createSearchBarFilterPanel(
                     Misc.getTextColor(), Misc.getHighlightColor(), "Sort & Filter", "x")
             }
 
-            with(plugin){
+            Plugin {
                 renderBelow { alphaMult ->
                     glColor(Misc.getDarkPlayerColor().darker(), alphaMult, false)
                     GL11.glRectf(left, bottom, right, top)
                     glColor(Misc.getDarkPlayerColor(), alphaMult, false)
-                    drawBorder(left+1f, bottom+1f, right-1f, top-1f)
+                    drawBorder(left + 1f, bottom + 1f, right - 1f, top - 1f)
+
+                    // Re-enable textures for safety!
+                    GL11.glEnable(GL11.GL_TEXTURE_2D)
                 }
 
                 val blinkInterval = IntervalUtil(0.5f, 0.5f)
                 var blink = false
-                var needsRefresh = false
 
                 advance { amount ->
                     blinkInterval.advance(amount)
                     if (blinkInterval.intervalElapsed()) {
                         blink = !blink
-                        if (blink) searchText.text = "${filterData.currentSearch} "
-                        else searchText.text = "${filterData.currentSearch}|"
+                        if (blink) searchText.text = "${filterData.currentSearch.value} "
+                        else searchText.text = "${filterData.currentSearch.value}|"
                     }
                     if (Mouse.isButtonDown(2)) {
                         resetFilters(pickerPanel)
-                        needsRefresh = true
-                    }
-                    // need to defer refresh to here as refreshing in plugin event listeners directly
-                    // causes some weird race condition crash only on some machines
-                    if (needsRefresh) {
-                        needsRefresh = false
-                        PickerPanelHelpers.filtersChanged(pickerPanel)
                     }
                 }
 
-                fun appendCharIfPossible(char: Char): Boolean{
-                    val hasRoomToAppend = searchText.computeTextWidth(searchText.text) < (width - 20)
-                    val isValidChar = when(char){
-                        '\u0000' -> false
-                        '%' -> false
-                        '$' -> false
+                fun appendCharIfPossible(char: Char): Boolean {
+                    val hasRoomToAppend = searchText.computeTextWidth(searchText.text) < (width - 15f)
+                    val isValidChar = when (char) {
+                        '\u0000', '%', '$' -> false
                         else -> true
                     }
 
-                    if (isValidChar && hasRoomToAppend){
+                    if (isValidChar && hasRoomToAppend) {
                         playSound("ui_typer_type")
-                        filterData.currentSearch += char
-                        needsRefresh = true
+                        filterData.currentSearch.value += char
                         return true
-                    } else{
+                    } else {
                         playSound("ui_typer_buzz")
                         return false
                     }
                 }
 
-                fun deleteCharIfPossible(event: InputEventAPI){
-                    if (filterData.currentSearch.isNotEmpty()) {
+                fun deleteCharIfPossible(event: InputEventAPI) {
+                    if (filterData.currentSearch.value.isNotEmpty()) {
                         event.consume()
                         playSound("ui_typer_type")
-                        filterData.currentSearch = filterData.currentSearch.dropLast(1)
-                        needsRefresh = true
+                        filterData.currentSearch.value = filterData.currentSearch.value.dropLast(1)
                     }
                 }
 
                 fun deleteLastWord(event: InputEventAPI) {
-                    if (filterData.currentSearch.isNotEmpty()) {
+                    if (filterData.currentSearch.value.isNotEmpty()) {
                         event.consume()
                         playSound("ui_typer_type")
-                        val trimmed = filterData.currentSearch.trim()
+                        val trimmed = filterData.currentSearch.value.trim()
                         val words = trimmed.split(Regex("\\s+"))
-                        filterData.currentSearch = when {
+                        filterData.currentSearch.value = when {
                             words.size <= 1 -> ""
                             else -> words.dropLast(1).joinToString(" ")
                         }
-                        needsRefresh = true
                     }
                 }
 
                 fun deleteAll(event: InputEventAPI) {
-                    if (filterData.currentSearch.isNotEmpty()) {
+                    if (filterData.currentSearch.value.isNotEmpty()) {
                         event.consume()
                         playSound("ui_typer_type")
-                        filterData.currentSearch = ""
-                        needsRefresh = true
+                        filterData.currentSearch.value = ""
                     }
                 }
 
@@ -178,22 +177,20 @@ fun UIPanelAPI.createSearchBarFilterPanel(
                         else if (event.isCtrlDown) deleteLastWord(event)
                         else deleteCharIfPossible(event)
                     }
-                    else if (event.eventValue == Keyboard.KEY_V && event.isCtrlDown){
+                    else if (event.eventValue == Keyboard.KEY_V && event.isCtrlDown) {
                         val clipboard = Toolkit.getDefaultToolkit().systemClipboard.getData(DataFlavor.stringFlavor) as String
                         for (char in clipboard) {
                             appendCharIfPossible(char)
                         }
                         event.consume()
                     }
-                    else if (event.eventValue == Keyboard.KEY_R && event.isCtrlDown){
+                    else if (event.eventValue == Keyboard.KEY_R && event.isCtrlDown) {
                         event.consume()
                         resetFilters(pickerPanel)
-                        needsRefresh = true
                     }
                     else if (!event.isCtrlDown && !event.isAltDown && event.eventValue !in (2..11) &&
-                        event.eventValue != Keyboard.KEY_RETURN && event.eventValue != Keyboard.KEY_NUMPADENTER)
-                    {
-                        if(appendCharIfPossible(event.eventChar)){
+                        event.eventValue != Keyboard.KEY_RETURN && event.eventValue != Keyboard.KEY_NUMPADENTER) {
+                        if (appendCharIfPossible(event.eventChar)) {
                             event.consume()
                         }
                     }
@@ -205,10 +202,8 @@ fun UIPanelAPI.createSearchBarFilterPanel(
                         else if (event.isCtrlDown) deleteLastWord(event)
                         else deleteCharIfPossible(event)
                         event.consume()
-
                     } else if (!event.isCtrlDown && !event.isAltDown && event.eventValue !in (2..11) &&
-                        event.eventValue != Keyboard.KEY_RETURN && event.eventValue != Keyboard.KEY_NUMPADENTER
-                    ) {
+                        event.eventValue != Keyboard.KEY_RETURN && event.eventValue != Keyboard.KEY_NUMPADENTER) {
                         if (appendCharIfPossible(event.eventChar)) {
                             event.consume()
                         }

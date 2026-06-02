@@ -5,10 +5,6 @@ import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
 import com.fs.starfarer.api.util.Misc
 import com.fs.starfarer.loading.specs.BaseWeaponSpec
-import org.starficz.UIFramework.ReflectionUtils
-import org.starficz.UIFramework.ReflectionUtils.get
-import org.starficz.UIFramework.addPara
-import org.starficz.UIFramework.getChildrenCopy
 /*
 fun UIPanelAPI.initWeaponSimulationListener(width: Float, height: Float): CustomPanelAPI {
 
