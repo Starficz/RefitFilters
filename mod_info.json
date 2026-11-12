@@ -5,7 +5,7 @@
     "utility": "true",
     "version": "3.1.3",
     "description": "Adds additional filters to the refit weapon picker.",
-    "gameVersion": "0.98a-RC8",
+    "gameVersion": "0.98.5a-RC4",
     "jars":["jars/RefitFilters.jar"],
     "modPlugin":"org.starficz.refitfilters.ModPlugin",
     "dependencies": [

@@ -66,6 +66,8 @@ internal object ReflectionUtils {
         methodClass.getHandle("getReturnType", Class::class.java)
     private val getMethodParametersHandle =
         methodClass.getHandle("getParameterTypes", arrayOf<Class<*>>().javaClass)
+    private val isMethodBridgeHandle =
+        methodClass.getHandle("isBridge", Boolean::class.javaPrimitiveType!!)
 
     private val constructorClass =
         Class.forName("java.lang.reflect.Constructor", false, Class::class.java.classLoader)
@@ -926,7 +928,30 @@ internal object ReflectionUtils {
 
                 // If all checks passed up to this point, keep the method
                 return@filter true
-            }.map { method -> ReflectedMethod(method) } // Wrap the matching method objects
+            }.withoutBridgeDuplicates().map { method -> ReflectedMethod(method) } // Wrap the matching method objects
+        }
+    }
+
+    /**
+     * Drops compiler-generated bridge methods whose real implementation is also in the list.
+     *
+     * When an obfuscated class overrides an API method with a narrower return type (for example
+     * `z getParent()` implementing `UIPanelAPI UIComponentAPI.getParent()` since 0.98.5a), javac also emits a
+     * bridge `UIPanelAPI getParent()`. Both match the same name and parameters, which would make `invoke` ambiguous,
+     * but they run the same code. A bridge without its implementation in the list is kept.
+     */
+    private fun List<Any>.withoutBridgeDuplicates(): List<Any> {
+        val bridges = filter { isMethodBridgeHandle.invoke(it) as Boolean }
+        if (bridges.isEmpty()) return this
+        val others = this - bridges.toSet()
+        return filter { method ->
+            method !in bridges || others.none { other ->
+                getMethodNameHandle.invoke(other) == getMethodNameHandle.invoke(method) &&
+                    (getMethodParametersHandle.invoke(other) as Array<*>)
+                        .contentEquals(getMethodParametersHandle.invoke(method) as Array<*>) &&
+                    (getMethodReturnHandle.invoke(method) as Class<*>)
+                        .isAssignableFrom(getMethodReturnHandle.invoke(other) as Class<*>)
+            }
         }
     }
 
