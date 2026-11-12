@@ -1,7 +1,7 @@
 package org.starficz.refitfilters
 
 import com.fs.starfarer.api.campaign.CoreUITabId
-import com.fs.starfarer.api.ui.Alignment
+import org.starficz.starui.compose.Alignment
 import com.fs.starfarer.api.ui.CutStyle
 import com.fs.starfarer.api.ui.UIComponentAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
@@ -44,8 +44,6 @@ abstract class BaseCargoInjection : DynamicInjection {
             text = "Filter 1",
             size = Size.exact(80f, 18f), // Matches vanilla 18f height
             modifier = Modifier.anchor(Anchor.rightOf.sibling(specialBtn).matchingBottomEdge(1f)),
-            font = Font.ORBITRON_12_CONDENSED,
-            align = Alignment.MID,
             cutStyle = CutStyle.TOP
         ) {
             // TODO: Add your filter toggle logic here
@@ -57,8 +55,6 @@ abstract class BaseCargoInjection : DynamicInjection {
             text = "Filter 2",
             size = Size.exact(80f, 18f),
             modifier = Modifier.anchor(Anchor.rightOf.sibling(customFilter1).matchingBottomEdge(1f)),
-            font = Font.ORBITRON_12_CONDENSED,
-            align = Alignment.MID,
             cutStyle = CutStyle.TOP
         ) {
             // TODO: Add your filter toggle logic here

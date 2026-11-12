@@ -1,5 +1,6 @@
 package org.starficz.refitfilters.filterpanels
 
+import org.starficz.starui.compose.modifier.padding
 import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.TooltipMakerAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
@@ -11,15 +12,13 @@ import org.starficz.refitfilters.PickerPanelHelpers.refreshPickerOn
 import org.starficz.refitfilters.RFSettings
 import org.starficz.refitfilters.WeaponFilterData
 import org.starficz.starui.compose.ImageSize
-import org.starficz.starui.compose.LayoutSize
-import org.starficz.starui.compose.PanelSize
 import org.starficz.starui.compose.Size
 import org.starficz.starui.compose.components.AreaCheckbox
 import org.starficz.starui.compose.components.CustomPanel
 import org.starficz.starui.compose.components.Image
 import org.starficz.starui.compose.components.Row
 import org.starficz.starui.compose.components.Text
-import org.starficz.starui.compose.layout.VerticalAlignment
+import org.starficz.starui.compose.Alignment
 import org.starficz.starui.compose.modifier.Modifier
 import org.starficz.starui.compose.modifier.anchor
 import org.starficz.starui.compose.modifier.tooltip
@@ -64,7 +63,7 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
     val fragColor = Color(255, 255, 131)
 
     // Exact size: FilterPanelCreator adds up the panels' heights right after creating them, before the first layout.
-    return Row(LayoutSize.exact(targetWidth, targetHeight), verticalAlignment = VerticalAlignment.Center, spacing = 1f) {
+    return Row(Size.exact(targetWidth, targetHeight), verticalAlignment = Alignment.CenterVertically, spacing = 1f) {
         with(filterData) {
             refreshPickerOn(pickerPanel, kineticDamage, heDamage, energyDamage, fragDamage, lowerRange, upperRange)
         }
@@ -74,16 +73,16 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
         fun createDamageTypeButton(iconPath: String, typeColor: Color, filterState: UIState<Boolean>, tooltipText: String) {
             // Reads filterState, so this little panel re-runs when the type is toggled: the checkbox and icon are
             // the same native objects each time (StarUI reuses them), only their look is updated.
-            CustomPanel(PanelSize.exact(targetHeight, targetHeight)) {
+            CustomPanel(Size.exact(targetHeight, targetHeight)) {
                 val enabled = filterState.value
                 val btn = AreaCheckbox(
-                    "", Size.exact(targetHeight, targetHeight),
+                    "", filterState, Size.exact(targetHeight, targetHeight),
                     Modifier.anchor(Anchor.inside.center.ofParent())
                         .tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) { addPara(tooltipText, 0f) },
-                    typeColor.darker(), typeColor.darker().darker(), typeColor,
-                    bind = filterState, buttonGroup = damageTypeGroup
+                    baseColor = typeColor.darker(), darkColor = typeColor.darker().darker(), brightColor = typeColor,
+                    buttonGroup = damageTypeGroup
                 )
-                val img = Image(iconPath, ImageSize.exact(targetHeight, targetHeight), Modifier.anchor(Anchor.inside.center.ofParent()))
+                val img = Image(iconPath, Size.exact(targetHeight, targetHeight), Modifier.anchor(Anchor.inside.center.ofParent()))
 
                 btn.glowBrightness = if (enabled) 0.5f else 1f
                 if (enabled) {
@@ -103,7 +102,7 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
         createDamageTypeButton(energyIconPath, energyColor, filterData.energyDamage, "Show energy damage.")
         createDamageTypeButton(fragmentationIconPath, fragColor, filterData.fragDamage, "Show fragmentation damage.")
 
-        Text("RANGE", Size.wrap(6f, 0f), font = Font.VICTOR_14, color = Misc.getTextColor())
+        Text("RANGE", modifier = Modifier.padding(horizontal = 6f, vertical = 0f), font = Font.VICTOR_14, color = Misc.getTextColor())
 
         val sliderTooltip = Modifier.tooltip(370f, TooltipMakerAPI.TooltipLocation.ABOVE) {
             addPara("Filters based on non-modified base range.", 0f)
@@ -112,7 +111,7 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
                 0f, Misc.getTextColor(), Misc.getHighlightColor(), "$maxRange")
         }
 
-        CustomPanel(PanelSize.fill(), sliderTooltip) {
+        CustomPanel(Size.fillMaxSize(), sliderTooltip) {
             val sliderPanel = this
             var lowerNodeHovered = false
             var upperNodeHovered = false

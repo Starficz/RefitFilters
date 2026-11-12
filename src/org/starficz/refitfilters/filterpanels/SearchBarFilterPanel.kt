@@ -18,14 +18,12 @@ import org.starficz.refitfilters.RFSettings
 import org.starficz.refitfilters.ReflectionUtils.getFieldsMatching
 import org.starficz.refitfilters.ReflectionUtils.getFieldsWithMethodsMatching
 import org.starficz.starui.compose.Axis
-import org.starficz.starui.compose.LayoutSize
-import org.starficz.starui.compose.PanelSize
 import org.starficz.starui.compose.Size
 import org.starficz.starui.compose.components.AreaCheckbox
 import org.starficz.starui.compose.components.CustomPanel
 import org.starficz.starui.compose.components.Row
 import org.starficz.starui.compose.components.Text
-import org.starficz.starui.compose.layout.VerticalAlignment
+import org.starficz.starui.compose.Alignment
 import org.starficz.starui.compose.modifier.Modifier
 import org.starficz.starui.compose.modifier.anchor
 import org.starficz.starui.compose.modifier.plugin
@@ -71,16 +69,16 @@ fun UIPanelAPI.createSearchBarFilterPanel(
     val caretVisible = UIState(false)
 
     // Exact size: FilterPanelCreator adds up the panels' heights right after creating them, before the first layout.
-    return Row(LayoutSize.exact(targetWidth, targetHeight), verticalAlignment = VerticalAlignment.Center, spacing = 1f) {
+    return Row(Size.exact(targetWidth, targetHeight), verticalAlignment = Alignment.CenterVertically, spacing = 1f) {
         refreshPickerOn(pickerPanel, filterData.currentSearch)
 
         AreaCheckbox(
-            "RESET FILTERS", Size.mixed(Axis.Exact(125f), Axis.Fill()),
-            Modifier.tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) {
+            "RESET FILTERS", size = Size.fillMaxHeight(width = 125f),
+            modifier = Modifier.tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) {
                 addPara("Reset all filters. You can also press CTRL + R or the Middle Mouse Button to do the same.",
                     0f, Misc.getTextColor(), Misc.getHighlightColor(), "CTRL + R", "Middle Mouse Button")
             },
-            baseColor, bgColor, brightColor, font = Font.VICTOR_14
+            baseColor = baseColor, darkColor = bgColor, brightColor = brightColor, font = Font.VICTOR_14
         ).also { button ->
             button.isChecked = true
             button.onClick {
@@ -215,7 +213,7 @@ fun UIPanelAPI.createSearchBarFilterPanel(
 
         // Fills the rest of the row. Its builder reads the search text and the caret, so it re-runs (updating the
         // same native label in place) whenever either changes.
-        CustomPanel(PanelSize.fill(), searchFieldModifier) {
+        CustomPanel(Size.fillMaxSize(), searchFieldModifier) {
             val caret = if (caretVisible.value) "|" else " "
             Text(
                 text = "${filterData.currentSearch.value}$caret",
