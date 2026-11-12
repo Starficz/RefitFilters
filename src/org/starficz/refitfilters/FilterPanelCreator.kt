@@ -14,6 +14,7 @@ import org.starficz.refitfilters.PickerPanelHelpers.sortAndFilterList
 import org.starficz.refitfilters.filterpanels.createDamageTypeRangeSliderFilterPanel
 import org.starficz.refitfilters.filterpanels.createSearchBarFilterPanel
 import org.starficz.refitfilters.filterpanels.createWeaponTypesFilterPanel
+import org.starficz.staruiframework.interfaces.Anchor
 import java.util.Comparator
 
 enum class PickerPanelType {

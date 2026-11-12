@@ -19,6 +19,7 @@ import org.starficz.refitfilters.ReflectionUtils.getFieldsWithMethodsMatching
 import org.starficz.refitfilters.FilterData
 import org.starficz.refitfilters.PickerPanelHelpers
 import org.starficz.refitfilters.RFSettings
+import org.starficz.staruiframework.interfaces.Anchor
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 
@@ -68,12 +69,12 @@ fun UIPanelAPI.createSearchBarFilterPanel(
                 resetFilters(pickerPanel)
                 this.isChecked = true
             }
+
         }
 
         // neg width is flex
         CustomPanel(-1f, -1f) {
 
-            // Pass the anchor directly into the DSL element to avoid double-anchoring!
             val searchText = Text(
                 text = "${filterData.currentSearch.value} ",
                 color = Misc.getBasePlayerColor(),

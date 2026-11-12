@@ -10,5 +10,8 @@ class ModPlugin : BaseModPlugin() {
         LunaSettings.addSettingsListener(RFSettings)
         StarUIManager.registerDynamicInjection(WeaponPickerInjection())
         StarUIManager.registerDynamicInjection(FighterPickerInjection())
+
+        StarUIManager.registerDynamicInjection(PlayerCargoInjection())
+        StarUIManager.registerDynamicInjection(EntityCargoInjection())
     }
 }

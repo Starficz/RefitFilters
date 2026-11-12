@@ -6,6 +6,7 @@ import org.lazywizard.lazylib.opengl.ColorUtils.glColor
 import org.lwjgl.opengl.GL11
 import org.starficz.staruiframework.*
 import org.starficz.refitfilters.*
+import org.starficz.staruiframework.interfaces.Anchor
 import java.awt.Color
 import kotlin.math.abs
 import kotlin.math.roundToInt

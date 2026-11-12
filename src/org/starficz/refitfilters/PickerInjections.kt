@@ -5,10 +5,10 @@ import com.fs.starfarer.api.ui.UIPanelAPI
 import com.fs.starfarer.campaign.CampaignState
 import com.fs.starfarer.title.TitleScreenState
 import com.fs.state.AppDriver
-import org.starficz.staruiframework.DynamicInjection
 import org.starficz.staruiframework.StarUIManager
 import org.starficz.refitfilters.ReflectionUtils.invoke
 import org.starficz.staruiframework.allChildrenWithMethod
+import org.starficz.staruiframework.interfaces.DynamicInjection
 
 private fun getPopupRootPanel(): UIPanelAPI? {
     val state = AppDriver.getInstance().currentState
