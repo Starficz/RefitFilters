@@ -42,7 +42,33 @@ object FilterPanelCreator {
     val fighterFilterData = FighterFilterData()
 
 
-    fun injectFilters(innerPanel: UIPanelAPI, pickerPanel: UIPanelAPI, pickerPanelType: PickerPanelType) {
+    /** The panels and their order, as the settings ask: vanilla's own filter bar is `null` here. */
+    private fun panelOrder(pickerPanelType: PickerPanelType): List<Pair<String?, Int>> = listOfNotNull(
+        "search" to RFSettings.ResetButtonSearchBarPanelOrder,
+        null to RFSettings.VanillaWeaponAvailabilityWeaponSlotPanelOrder,
+        if (pickerPanelType == PickerPanelType.Weapons) "types" to RFSettings.WeaponTypePanelOrder else null,
+        "damage" to RFSettings.DamageTypeRangeSliderOrder
+    ).filter { (_, order) -> order != 0 }.sortedBy { (_, order) -> order }
+
+    /**
+     * How much taller the picker gets from the injected panels, for vanilla's own height sum (see WeaponPickerPatch):
+     * every panel row, the 1 px gaps between them (none below vanilla's bar), and the list's 6 px gap where vanilla
+     * left 1 px below its bar.
+     */
+    fun injectedExtraHeight(pickerPanelType: PickerPanelType): Float {
+        val order = panelOrder(pickerPanelType)
+        val ownPanels = order.count { it.first != null }
+        if (ownPanels == 0) return 0f
+        val gaps = order.zipWithNext().count { (prev, _) -> prev.first != null }
+        return ownPanels * filterRowHeight + gaps + 6f - 1f
+    }
+
+    /**
+     * Adds the filter panels to a freshly built picker. With [vanillaBuilt], vanilla has already filtered, sorted and
+     * sized the list (WeaponPickerPatch hooks its build), so only the panels are added and laid out here.
+     */
+    fun injectFilters(innerPanel: UIPanelAPI, pickerPanel: UIPanelAPI, pickerPanelType: PickerPanelType,
+                      vanillaBuilt: Boolean = false) {
         val filterData = when(pickerPanelType){
             PickerPanelType.Weapons -> weaponFilterData
             PickerPanelType.Fighters -> fighterFilterData
@@ -59,14 +85,11 @@ object FilterPanelCreator {
         val itemsList = uiElements[existingFiltersIndex+1]
         var noItems = uiElements.getOrNull(existingFiltersIndex+2)
 
-        val sortedSpecPairs = when(pickerPanelType){
+        val sortedSpecPairs = if (vanillaBuilt) emptyList() else when(pickerPanelType){
             PickerPanelType.Weapons -> {
                 val searchString = weaponFilterData.currentSearch.value
                 val comparator: Comparator<Pair<Any, WeaponSpecAPI>> = compareByDescending { (_, spec) ->
-                    maxOf(FuzzySearch.fuzzyMatch(searchString, spec.weaponName).second,
-                        FuzzySearch.fuzzyMatch(searchString, spec.manufacturer).second,
-                        spec.sourceMod?.let { FuzzySearch.fuzzyMatch(searchString, it.name).second } ?: 0
-                    )
+                    weaponSearchScore(searchString, spec)
                 }
 
                 sortAndFilterList(itemsList, WeaponSpecAPI::class.java, ::weaponFiltered, weaponFilterData,
@@ -93,7 +116,7 @@ object FilterPanelCreator {
         val damageTypeRangeSliderFilterPanel = if(RFSettings.DamageTypeRangeSliderOrder != 0)
             innerPanel.createDamageTypeRangeSliderFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData) else null
 
-        if (sortedSpecPairs.isEmpty() && noItems == null) {
+        if (!vanillaBuilt && sortedSpecPairs.isEmpty() && noItems == null) {
             noItems = innerPanel.CustomPanel(PanelSize.exact(rowWidth, itemRowHeight)) {
                 val itemText = when(pickerPanelType) { PickerPanelType.Weapons -> "weapons" else -> "fighters" }
                 Text(" No $itemText matching filter", color = Misc.getBasePlayerColor(),
@@ -136,11 +159,20 @@ object FilterPanelCreator {
         itemsList.position.belowLeft(activeFilterPanels.last(), 6f)
         noItems?.position?.belowLeft(activeFilterPanels.last(), 6f)
 
+        if (vanillaBuilt) return
+
         if (pickerPanelType == PickerPanelType.Fighters) pickerPanel.position.width -= 5f
 
         setPickerPanelHeight(pickerHeight, pickerPanel)
         innerPanel.yAlignOffset = pickerPanel.top - innerPanel.top
     }
+
+    /** How well a weapon matches the search: its best fuzzy score over name, manufacturer and source mod. */
+    fun weaponSearchScore(search: String, spec: WeaponSpecAPI): Int =
+        maxOf(FuzzySearch.fuzzyMatch(search, spec.weaponName).second,
+            FuzzySearch.fuzzyMatch(search, spec.manufacturer).second,
+            spec.sourceMod?.let { FuzzySearch.fuzzyMatch(search, it.name).second } ?: 0
+        )
 
     fun weaponFiltered(weaponSpec: WeaponSpecAPI, filterData: WeaponFilterData): Boolean{
         with(filterData){

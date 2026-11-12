@@ -8,7 +8,7 @@ import org.starficz.starui.compose.runtime.StarUIManager
 class ModPlugin : BaseModPlugin() {
     override fun onApplicationLoad() {
         LunaSettings.addSettingsListener(RFSettings)
-        StarUIManager.registerDynamicInjection(WeaponPickerInjection())
+        // The weapon picker is handled by WeaponPickerPatch (PatchLib hooks on its build).
         StarUIManager.registerDynamicInjection(FighterPickerInjection())
 
         StarUIManager.registerDynamicInjection(PlayerCargoInjection())
