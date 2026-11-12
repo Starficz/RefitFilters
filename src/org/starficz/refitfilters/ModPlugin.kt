@@ -2,7 +2,6 @@ package org.starficz.refitfilters
 
 import com.fs.starfarer.api.BaseModPlugin
 import lunalib.lunaSettings.LunaSettings
-import org.starficz.starui.compose.runtime.StarUIManager
 
 
 class ModPlugin : BaseModPlugin() {
@@ -11,7 +10,8 @@ class ModPlugin : BaseModPlugin() {
         // The weapon and fighter pickers are handled by WeaponPickerPatch / FighterPickerPatch (PatchLib hooks on
         // their builds).
 
-        StarUIManager.registerDynamicInjection(PlayerCargoInjection())
-        StarUIManager.registerDynamicInjection(EntityCargoInjection())
+        // Cargo screen filters are work in progress (CargoInjections.kt); not registered until they do something.
+        // StarUIManager.registerDynamicInjection(PlayerCargoInjection())
+        // StarUIManager.registerDynamicInjection(EntityCargoInjection())
     }
 }
