@@ -2,7 +2,7 @@ package org.starficz.refitfilters
 
 import com.fs.starfarer.api.BaseModPlugin
 import lunalib.lunaSettings.LunaSettings
-import org.starficz.staruiframework.StarUIManager
+import org.starficz.starui.compose.runtime.StarUIManager
 
 
 class ModPlugin : BaseModPlugin() {

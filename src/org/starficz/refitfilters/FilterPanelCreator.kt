@@ -7,14 +7,25 @@ import com.fs.starfarer.api.loading.WeaponSpecAPI
 import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
 import com.fs.starfarer.api.util.Misc
-import org.starficz.staruiframework.*
+import org.starficz.starui.compose.PanelSize
+import org.starficz.starui.compose.components.CustomPanel
+import org.starficz.starui.compose.components.Text
+import org.starficz.starui.compose.modifier.Modifier
+import org.starficz.starui.compose.modifier.anchor
+import org.starficz.starui.compose.runtime.StarUIPanelPlugin
+import org.starficz.starui.core.Anchor
+import org.starficz.starui.core.getChildrenCopy
+import org.starficz.starui.core.height
+import org.starficz.starui.core.top
+import org.starficz.starui.core.width
+import org.starficz.starui.core.xAlignOffset
+import org.starficz.starui.core.yAlignOffset
 import org.starficz.refitfilters.ReflectionUtils.getMethodsMatching
 import org.starficz.refitfilters.PickerPanelHelpers.setPickerPanelHeight
 import org.starficz.refitfilters.PickerPanelHelpers.sortAndFilterList
 import org.starficz.refitfilters.filterpanels.createDamageTypeRangeSliderFilterPanel
 import org.starficz.refitfilters.filterpanels.createSearchBarFilterPanel
 import org.starficz.refitfilters.filterpanels.createWeaponTypesFilterPanel
-import org.starficz.staruiframework.interfaces.Anchor
 import java.util.Comparator
 
 enum class PickerPanelType {
@@ -83,9 +94,10 @@ object FilterPanelCreator {
             innerPanel.createDamageTypeRangeSliderFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData) else null
 
         if (sortedSpecPairs.isEmpty() && noItems == null) {
-            noItems = innerPanel.CustomPanel(rowWidth, itemRowHeight) {
+            noItems = innerPanel.CustomPanel(PanelSize.exact(rowWidth, itemRowHeight)) {
                 val itemText = when(pickerPanelType) { PickerPanelType.Weapons -> "weapons" else -> "fighters" }
-                Text(" No $itemText matching filter", color = Misc.getBasePlayerColor(), anchor = Anchor.inside.center.ofParent())
+                Text(" No $itemText matching filter", color = Misc.getBasePlayerColor(),
+                    modifier = Modifier.anchor(Anchor.inside.center.ofParent()))
             }
         }
 

@@ -1,19 +1,39 @@
 package org.starficz.refitfilters
 
 import com.fs.starfarer.api.Global
+import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.UIComponentAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
 import org.starficz.refitfilters.ReflectionUtils.get
 import org.starficz.refitfilters.ReflectionUtils.getFieldsMatching
 import org.starficz.refitfilters.ReflectionUtils.invoke
-import org.starficz.staruiframework.centerY
-import org.starficz.staruiframework.height
-import org.starficz.staruiframework.top
-import org.starficz.staruiframework.yAlignOffset
+import org.starficz.starui.compose.runtime.StarUIPanelPlugin
+import org.starficz.starui.compose.runtime.UIState
+import org.starficz.starui.core.centerY
+import org.starficz.starui.core.height
+import org.starficz.starui.core.top
+import org.starficz.starui.core.yAlignOffset
 
 object PickerPanelHelpers {
     fun filtersChanged(pickerPanel: UIPanelAPI){
         pickerPanel.invoke("notifyFilterChanged")
+    }
+
+    /**
+     * Call inside a filter panel's builder: when any of [states] changes, the picker re-filters on this panel's next
+     * advance. Not from the input handler itself: vanilla's notifyFilterChanged() rebuilds the picker's inner panel,
+     * this panel included, and the DynamicInjection puts fresh filter panels back later in the same frame (scripts
+     * run after UI advance and before render), so no unfiltered frame is ever drawn.
+     */
+    fun CustomPanelAPI.refreshPickerOn(pickerPanel: UIPanelAPI, vararg states: UIState<*>) {
+        var needsRefresh = false
+        states.forEach { it.onChange { needsRefresh = true } }
+        (plugin as StarUIPanelPlugin).advance {
+            if (needsRefresh) {
+                needsRefresh = false
+                filtersChanged(pickerPanel)
+            }
+        }
     }
 
     fun setPickerPanelHeight(height: Float, pickerPanel: UIPanelAPI) {

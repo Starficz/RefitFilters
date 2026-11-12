@@ -1,6 +1,6 @@
 package org.starficz.refitfilters
 
-import org.starficz.staruiframework.UIState
+import org.starficz.starui.compose.runtime.UIState
 
 abstract class FilterData(
     val kineticDamage: UIState<Boolean> = UIState(true),

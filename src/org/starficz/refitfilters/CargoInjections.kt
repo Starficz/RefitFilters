@@ -5,11 +5,17 @@ import com.fs.starfarer.api.ui.Alignment
 import com.fs.starfarer.api.ui.CutStyle
 import com.fs.starfarer.api.ui.UIComponentAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
-import org.starficz.staruiframework.*
+import org.starficz.starui.compose.Size
+import org.starficz.starui.compose.components.Button
+import org.starficz.starui.compose.modifier.Modifier
+import org.starficz.starui.compose.modifier.anchor
+import org.starficz.starui.compose.runtime.DynamicInjection
+import org.starficz.starui.compose.runtime.StarUIManager
+import org.starficz.starui.core.Anchor
+import org.starficz.starui.core.Font
+import org.starficz.starui.core.children
 import org.starficz.refitfilters.ReflectionUtils.getMethodsMatching
 import org.starficz.refitfilters.ReflectionUtils.invoke
-import org.starficz.staruiframework.interfaces.Anchor
-import org.starficz.staruiframework.interfaces.DynamicInjection
 
 abstract class BaseCargoInjection : DynamicInjection {
     // Determine whether to fetch the player's side or the market's side
@@ -35,33 +41,27 @@ abstract class BaseCargoInjection : DynamicInjection {
 
         // Create the first injected button, anchoring it 3 pixels to the right of "Other"
         val customFilter1 = Button(
-            width = 80f,
-            height = 18f, // Matches vanilla 18f height
             text = "Filter 1",
+            size = Size.exact(80f, 18f), // Matches vanilla 18f height
+            modifier = Modifier.anchor(Anchor.rightOf.sibling(specialBtn).matchingBottomEdge(1f)),
             font = Font.ORBITRON_12_CONDENSED,
             align = Alignment.MID,
-            style = CutStyle.TOP,
-            anchor = Anchor.rightOf.sibling(specialBtn).matchingBottomEdge(xMargin = 1f)
+            cutStyle = CutStyle.TOP
         ) {
-            onClick {
-                // TODO: Add your filter toggle logic here
-                // e.g. this.invoke("getFilteredCargo") and apply filters
-            }
+            // TODO: Add your filter toggle logic here
+            // e.g. this.invoke("getFilteredCargo") and apply filters
         }
 
         // Create the second injected button, anchoring it 3 pixels to the right of the first injected button
         val customFilter2 = Button(
-            width = 80f,
-            height = 18f,
             text = "Filter 2",
+            size = Size.exact(80f, 18f),
+            modifier = Modifier.anchor(Anchor.rightOf.sibling(customFilter1).matchingBottomEdge(1f)),
             font = Font.ORBITRON_12_CONDENSED,
             align = Alignment.MID,
-            style = CutStyle.TOP,
-            anchor = Anchor.rightOf.sibling(customFilter1).matchingBottomEdge(xMargin = 1f)
+            cutStyle = CutStyle.TOP
         ) {
-            onClick {
-                // TODO: Add your filter toggle logic here
-            }
+            // TODO: Add your filter toggle logic here
         }
     }
 }

@@ -1,12 +1,42 @@
 package org.starficz.refitfilters.filterpanels
 
-import com.fs.starfarer.api.ui.*
+import com.fs.starfarer.api.ui.CustomPanelAPI
+import com.fs.starfarer.api.ui.TooltipMakerAPI
+import com.fs.starfarer.api.ui.UIPanelAPI
 import com.fs.starfarer.api.util.Misc
 import org.lazywizard.lazylib.opengl.ColorUtils.glColor
 import org.lwjgl.opengl.GL11
-import org.starficz.staruiframework.*
-import org.starficz.refitfilters.*
-import org.starficz.staruiframework.interfaces.Anchor
+import org.starficz.refitfilters.FilterData
+import org.starficz.refitfilters.PickerPanelHelpers.refreshPickerOn
+import org.starficz.refitfilters.RFSettings
+import org.starficz.refitfilters.WeaponFilterData
+import org.starficz.starui.compose.ImageSize
+import org.starficz.starui.compose.LayoutSize
+import org.starficz.starui.compose.PanelSize
+import org.starficz.starui.compose.Size
+import org.starficz.starui.compose.components.AreaCheckbox
+import org.starficz.starui.compose.components.CustomPanel
+import org.starficz.starui.compose.components.Image
+import org.starficz.starui.compose.components.Row
+import org.starficz.starui.compose.components.Text
+import org.starficz.starui.compose.layout.VerticalAlignment
+import org.starficz.starui.compose.modifier.Modifier
+import org.starficz.starui.compose.modifier.anchor
+import org.starficz.starui.compose.modifier.tooltip
+import org.starficz.starui.compose.runtime.ButtonGroup
+import org.starficz.starui.compose.runtime.StarUIPanelPlugin
+import org.starficz.starui.compose.runtime.UIState
+import org.starficz.starui.core.Anchor
+import org.starficz.starui.core.BoxedUILabel
+import org.starficz.starui.core.Font
+import org.starficz.starui.core.applyAnchor
+import org.starficz.starui.core.bottom
+import org.starficz.starui.core.left
+import org.starficz.starui.core.right
+import org.starficz.starui.core.top
+import org.starficz.starui.core.width
+import org.starficz.starui.linMap
+import org.starficz.starui.playSound
 import java.awt.Color
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -33,50 +63,38 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
     val energyColor = Color(125, 194, 255)
     val fragColor = Color(255, 255, 131)
 
-    return HorizontalStackLayout(spacing = 1f, alignment = Alignment.LMID, minWidth = targetWidth, minHeight = targetHeight) {
-        var needsRefresh = false
-        Plugin {
-            advance {
-                if (needsRefresh) {
-                    PickerPanelHelpers.filtersChanged(pickerPanel)
-                    needsRefresh = false
-                }
-            }
+    // Exact size: FilterPanelCreator adds up the panels' heights right after creating them, before the first layout.
+    return Row(LayoutSize.exact(targetWidth, targetHeight), verticalAlignment = VerticalAlignment.Center, spacing = 1f) {
+        with(filterData) {
+            refreshPickerOn(pickerPanel, kineticDamage, heDamage, energyDamage, fragDamage, lowerRange, upperRange)
         }
-
-        filterData.kineticDamage.onChange { needsRefresh = true }
-        filterData.heDamage.onChange { needsRefresh = true }
-        filterData.energyDamage.onChange { needsRefresh = true }
-        filterData.fragDamage.onChange { needsRefresh = true }
-        filterData.lowerRange.onChange { needsRefresh = true }
-        filterData.upperRange.onChange { needsRefresh = true }
 
         val damageTypeGroup = ButtonGroup()
 
         fun createDamageTypeButton(iconPath: String, typeColor: Color, filterState: UIState<Boolean>, tooltipText: String) {
-            CustomPanel(targetHeight, targetHeight) {
-                val btn = AreaCheckbox(targetHeight, targetHeight, "", typeColor.darker(), typeColor.darker().darker(), typeColor,
-                    bind = filterState, buttonGroup = damageTypeGroup, anchor = Anchor.inside.center.ofParent()) {
-                    Tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) { addPara(tooltipText, 0f) }
+            // Reads filterState, so this little panel re-runs when the type is toggled: the checkbox and icon are
+            // the same native objects each time (StarUI reuses them), only their look is updated.
+            CustomPanel(PanelSize.exact(targetHeight, targetHeight)) {
+                val enabled = filterState.value
+                val btn = AreaCheckbox(
+                    "", Size.exact(targetHeight, targetHeight),
+                    Modifier.anchor(Anchor.inside.center.ofParent())
+                        .tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) { addPara(tooltipText, 0f) },
+                    typeColor.darker(), typeColor.darker().darker(), typeColor,
+                    bind = filterState, buttonGroup = damageTypeGroup
+                )
+                val img = Image(iconPath, ImageSize.exact(targetHeight, targetHeight), Modifier.anchor(Anchor.inside.center.ofParent()))
+
+                btn.glowBrightness = if (enabled) 0.5f else 1f
+                if (enabled) {
+                    img.sprite.setAdditiveBlend()
+                    img.sprite.alphaMult = 0.9f
+                    img.sprite.color = typeColor
+                } else {
+                    img.sprite.setNormalBlend()
+                    img.sprite.alphaMult = 1f
+                    img.sprite.color = typeColor.darker()
                 }
-
-                val img = Image(targetHeight, targetHeight, iconPath, anchor = Anchor.inside.center.ofParent())
-
-                fun updateVisuals() {
-                    btn.glowBrightness = if (filterState.value) 0.5f else 1f
-                    if (filterState.value) {
-                        img.sprite.setAdditiveBlend()
-                        img.sprite.alphaMult = 0.9f
-                        img.sprite.color = typeColor
-                    } else {
-                        img.sprite.setNormalBlend()
-                        img.sprite.alphaMult = 1f
-                        img.sprite.color = typeColor.darker()
-                    }
-                }
-
-                updateVisuals()
-                filterState.onChange { updateVisuals() }
             }
         }
 
@@ -85,16 +103,17 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
         createDamageTypeButton(energyIconPath, energyColor, filterData.energyDamage, "Show energy damage.")
         createDamageTypeButton(fragmentationIconPath, fragColor, filterData.fragDamage, "Show fragmentation damage.")
 
-        Text("RANGE", Font.VICTOR_14, Misc.getTextColor(), xPad = 6f)
+        Text("RANGE", Size.wrap(6f, 0f), font = Font.VICTOR_14, color = Misc.getTextColor())
 
-        CustomPanel(width = -1f, height = -1f) {
-            Tooltip(370f, TooltipMakerAPI.TooltipLocation.ABOVE) {
-                addPara("Filters based on non-modified base range.", 0f)
-                addPara("Click anywhere within the slider to move the nearest point.", 0f)
-                addPara("Setting the maximum to $maxRange makes the upper limit infinite.",
-                    0f, Misc.getTextColor(), Misc.getHighlightColor(), "$maxRange")
-            }
+        val sliderTooltip = Modifier.tooltip(370f, TooltipMakerAPI.TooltipLocation.ABOVE) {
+            addPara("Filters based on non-modified base range.", 0f)
+            addPara("Click anywhere within the slider to move the nearest point.", 0f)
+            addPara("Setting the maximum to $maxRange makes the upper limit infinite.",
+                0f, Misc.getTextColor(), Misc.getHighlightColor(), "$maxRange")
+        }
 
+        CustomPanel(PanelSize.fill(), sliderTooltip) {
+            val sliderPanel = this
             var lowerNodeHovered = false
             var upperNodeHovered = false
 
@@ -115,14 +134,13 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
             val maxSliderRange = minRange + numOfTicks * rangeIncrement
             val sliderTickRanges = (0..numOfTicks).map { it * rangeIncrement + minRange }
 
-            fun tickSpacing() = (this.width - minBarLeftPad - minBarRightPad - tickThickness) / numOfTicks.toFloat()
+            fun tickSpacing() = (sliderPanel.width - minBarLeftPad - minBarRightPad - tickThickness) / numOfTicks.toFloat()
 
             fun tickXOffsets() = if (pixelPerfect) (0..numOfTicks).map { (it * tickSpacing()).toInt() }
                                  else (0..numOfTicks).map { (it * tickSpacing()).roundToInt() }
 
             fun startingTickXPos() = minBarLeftPad + tickThickness / 2 - 1
 
-            // 2. Update the helper functions to call the new functions
             fun mapRangeToXOffset(range: Float): Float {
                 val offsets = tickXOffsets()
                 val rangeXOffset: Float = range.linMap(minRange, maxSliderRange, offsets.first(), offsets.last())
@@ -132,17 +150,17 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
 
             fun mapXPosToRange(xPos: Float): Float {
                 val offsets = tickXOffsets()
-                val nodeStartCenterXPos = left + minBarLeftPad + tickThickness / 2
+                val nodeStartCenterXPos = sliderPanel.left + minBarLeftPad + tickThickness / 2
                 val range: Float = xPos.linMap(offsets.first() + nodeStartCenterXPos,
                     offsets.last() + nodeStartCenterXPos, minRange, maxSliderRange)
                 val snappedRange = sliderTickRanges.minByOrNull { abs(range - it) }!!
                 return if (rangeTickSnapping) snappedRange.toFloat() else range
             }
 
-            // Create the text labels with NO anchor initially
+            // Tick labels are placed once the slider's width is known (onLayout below).
             fun createLabel(value: Int): BoxedUILabel {
                 val str = if (value < 10000) value.toString() else "${value / 1000}K"
-                return Text(str, Font.VICTOR_14, Misc.getTextColor(), anchor = Anchor.None)
+                return Text(str, font = Font.VICTOR_14, color = Misc.getTextColor())
             }
 
             val minLabel = createLabel(minRange)
@@ -155,10 +173,10 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
 
             val maxLabel = createLabel(sliderTickRanges.last())
 
-            Plugin {
+            with(sliderPanel.plugin as StarUIPanelPlugin) {
                 setMouseCapturePad(0f, 0f, 0f, 4f)
 
-                // LIFECYCLE HOOK: Anchor the text labels dynamically once the layout has fully resolved!
+                // After every layout pass: the tick positions depend on the slider's width.
                 onLayout {
                     val offsets = tickXOffsets()
                     val startX = startingTickXPos()
