@@ -136,7 +136,7 @@ object FilterPanelCreator {
         itemsList.position.belowLeft(activeFilterPanels.last(), 6f)
         noItems?.position?.belowLeft(activeFilterPanels.last(), 6f)
 
-        if (pickerPanelType == PickerPanelType.Fighters) pickerPanel.width -= 5f
+        if (pickerPanelType == PickerPanelType.Fighters) pickerPanel.position.width -= 5f
 
         setPickerPanelHeight(pickerHeight, pickerPanel)
         innerPanel.yAlignOffset = pickerPanel.top - innerPanel.top

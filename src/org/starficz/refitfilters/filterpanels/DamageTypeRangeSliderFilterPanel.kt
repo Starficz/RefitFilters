@@ -27,7 +27,7 @@ import org.starficz.starui.compose.runtime.ButtonGroup
 import org.starficz.starui.compose.runtime.StarUIPanelPlugin
 import org.starficz.starui.compose.runtime.UIState
 import org.starficz.starui.core.Anchor
-import org.starficz.starui.core.BoxedUILabel
+import com.fs.starfarer.api.ui.LabelAPI
 import org.starficz.starui.core.Font
 import org.starficz.starui.core.applyAnchor
 import org.starficz.starui.core.bottom
@@ -158,7 +158,7 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
             }
 
             // Tick labels are placed once the slider's width is known (onLayout below).
-            fun createLabel(value: Int): BoxedUILabel {
+            fun createLabel(value: Int): LabelAPI {
                 val str = if (value < 10000) value.toString() else "${value / 1000}K"
                 return Text(str, font = Font.VICTOR_14, color = Misc.getTextColor())
             }

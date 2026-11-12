@@ -45,7 +45,7 @@ object PickerPanelHelpers {
             ?: throw Exception("Unable to differentiate weaponPickerDialog's obf float fields")
 
         holoHeightField.set(pickerPanel, height)
-        pickerPanel.height = height
+        pickerPanel.position.height = height
 
         // pin the weapons list in place
         pinPickerPanelYPos(pickerPanel)
