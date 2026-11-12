@@ -22,9 +22,7 @@ internal var UIComponentAPI.opacity: Float
     get() = invoke("getOpacity") as Float
     set(alpha) { invoke("setOpacity", alpha) }
 
-internal var UIComponentAPI.parent: UIPanelAPI?
-    get() = invoke("getParent") as UIPanelAPI?
-    set(parent) { invoke("setParent", parent) }
+// parent: UIComponentAPI.getParent() / setParent2() are API since 0.98.5a.
 
 internal fun UIComponentAPI.setMouseOverPad(pad1: Float, pad2: Float, pad3: Float, pad4: Float) {
     invoke("setMouseOverPad", pad1, pad2, pad3, pad4)
@@ -82,23 +80,18 @@ internal var UIComponentAPI.enabled: Boolean
         invoke("setEnabled", enabled)
     }
 
-internal var UIComponentAPI.width
-    get() = position.width
-    set(width) { position.setSize(width, position.height) }
-
-internal var UIComponentAPI.height
-    get() = position.height
-    set(height) { position.setSize(position.width, height) }
-
+// width, height, x and y are UIComponentAPI members since 0.98.5a (getWidth() etc. read the component's position).
 internal fun UIComponentAPI.setSize(width: Float, height: Float){
     position.setSize(width, height)
 }
 
-internal val UIComponentAPI.x
-    get() = position.x
+internal fun UIComponentAPI.setWidth(width: Float){
+    position.setSize(width, position.height)
+}
 
-internal val UIComponentAPI.y
-    get() = position.y
+internal fun UIComponentAPI.setHeight(height: Float){
+    position.setSize(position.width, height)
+}
 
 internal val UIComponentAPI.left
     get() = x
@@ -259,21 +252,11 @@ internal fun UIPanelAPI.allChildsWithMethod(methodName: String): List<UIComponen
     return getChildrenCopy().filter { it.getMethodsMatching(methodName).isNotEmpty() }
 }
 
-internal fun UIPanelAPI.clearChildren() {
-    invoke("clearChildren")
-}
-
 // Abstract base class for Boxed vanilla elements to fix vanilla jank / things with no API's (like images)
 abstract class BoxedUIElement(val boxedElement: UIComponentAPI)
 
-class BoxedUILabel(val uiLabel: LabelAPI): BoxedUIElement(uiLabel as UIComponentAPI),
-    UIComponentAPI by (uiLabel as UIComponentAPI), LabelAPI by uiLabel {
-    override fun advance(amount: Float) { uiLabel.advance(amount) }
-    override fun getOpacity() = uiLabel.opacity
-    override fun setOpacity(opacity: Float) { uiLabel.opacity = opacity }
-    override fun render(alphaMult: Float) { uiLabel.render(alphaMult) }
-    override fun getPosition() = uiLabel.position
-}
+// LabelAPI extends UIComponentAPI since 0.98.5a, so delegating LabelAPI covers both.
+class BoxedUILabel(val uiLabel: LabelAPI): BoxedUIElement(uiLabel), LabelAPI by uiLabel
 
 class BoxedUIImage(val uiImage: UIComponentAPI): BoxedUIElement(uiImage), UIComponentAPI by uiImage {
     var spriteName = uiImage.invoke("getSpriteName") as String
