@@ -6,27 +6,16 @@ import com.fs.starfarer.api.loading.FighterWingSpecAPI
 import com.fs.starfarer.api.loading.WeaponSpecAPI
 import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
-import com.fs.starfarer.api.util.Misc
-import org.starficz.starui.compose.PanelSize
-import org.starficz.starui.compose.components.CustomPanel
-import org.starficz.starui.compose.components.Text
-import org.starficz.starui.compose.modifier.Modifier
-import org.starficz.starui.compose.modifier.anchor
 import org.starficz.starui.compose.runtime.StarUIPanelPlugin
-import org.starficz.starui.core.Anchor
 import org.starficz.starui.core.getChildrenCopy
 import org.starficz.starui.core.height
 import org.starficz.starui.core.top
-import org.starficz.starui.core.width
 import org.starficz.starui.core.xAlignOffset
 import org.starficz.starui.core.yAlignOffset
 import org.starficz.refitfilters.ReflectionUtils.getMethodsMatching
-import org.starficz.refitfilters.PickerPanelHelpers.setPickerPanelHeight
-import org.starficz.refitfilters.PickerPanelHelpers.sortAndFilterList
 import org.starficz.refitfilters.filterpanels.createDamageTypeRangeSliderFilterPanel
 import org.starficz.refitfilters.filterpanels.createSearchBarFilterPanel
 import org.starficz.refitfilters.filterpanels.createWeaponTypesFilterPanel
-import java.util.Comparator
 
 enum class PickerPanelType {
     Weapons,
@@ -64,11 +53,11 @@ object FilterPanelCreator {
     }
 
     /**
-     * Adds the filter panels to a freshly built picker. With [vanillaBuilt], vanilla has already filtered, sorted and
-     * sized the list (WeaponPickerPatch hooks its build), so only the panels are added and laid out here.
+     * Adds the filter panels to a picker vanilla has just built (WeaponPickerPatch / FighterPickerPatch hook the
+     * build). Vanilla has already filtered, sorted and sized the list with our filters, so only the panels are added
+     * and the rows below them moved down.
      */
-    fun injectFilters(innerPanel: UIPanelAPI, pickerPanel: UIPanelAPI, pickerPanelType: PickerPanelType,
-                      vanillaBuilt: Boolean = false) {
+    fun injectFilters(innerPanel: UIPanelAPI, pickerPanel: UIPanelAPI, pickerPanelType: PickerPanelType) {
         val filterData = when(pickerPanelType){
             PickerPanelType.Weapons -> weaponFilterData
             PickerPanelType.Fighters -> fighterFilterData
@@ -77,37 +66,16 @@ object FilterPanelCreator {
         val uiElements = innerPanel.getChildrenCopy()
         if (uiElements.any { it is CustomPanelAPI && it.plugin is StarUIPanelPlugin }) return
 
+        // vanilla's children, in the order its build adds them:
+        // [currently mounted item, its caption,] filter bar, item list[, "No ... matching filter" label]
         val existingFiltersIndex = uiElements.indexOfFirst { it.getMethodsMatching("addItem").isNotEmpty() }
+        if (existingFiltersIndex < 0) return
 
         val currentlySelected = uiElements.getOrNull(existingFiltersIndex-2)
         val currentlyMountedText = uiElements.getOrNull(existingFiltersIndex-1)
         val existingFilters = uiElements[existingFiltersIndex]
-        val itemsList = uiElements[existingFiltersIndex+1]
-        var noItems = uiElements.getOrNull(existingFiltersIndex+2)
-
-        val sortedSpecPairs = if (vanillaBuilt) emptyList() else when(pickerPanelType){
-            PickerPanelType.Weapons -> {
-                val searchString = weaponFilterData.currentSearch.value
-                val comparator: Comparator<Pair<Any, WeaponSpecAPI>> = compareByDescending { (_, spec) ->
-                    weaponSearchScore(searchString, spec)
-                }
-
-                sortAndFilterList(itemsList, WeaponSpecAPI::class.java, ::weaponFiltered, weaponFilterData,
-                    comparator, searchString, RFSettings.searchBarBehaviour)
-            }
-            PickerPanelType.Fighters -> {
-                val searchString = fighterFilterData.currentSearch.value
-                val comparator: Comparator<Pair<Any, FighterWingSpecAPI>> = compareByDescending { (_, spec) ->
-                    maxOf(FuzzySearch.fuzzyMatch(searchString, spec.wingName).second,
-                        spec.variant?.hullSpec?.manufacturer?.let { FuzzySearch.fuzzyMatch(searchString, it).second } ?: 0,
-                        spec.sourceMod?.let { FuzzySearch.fuzzyMatch(searchString, it.name).second } ?: 0
-                    )
-                }
-
-                sortAndFilterList(itemsList, FighterWingSpecAPI::class.java, ::fighterFiltered, fighterFilterData,
-                    comparator, searchString, RFSettings.searchBarBehaviour)
-            }
-        }
+        val itemsList = uiElements.getOrNull(existingFiltersIndex+1) ?: return
+        val noItems = uiElements.getOrNull(existingFiltersIndex+2)
 
         val searchBarFilterPanel =
             innerPanel.createSearchBarFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
@@ -116,34 +84,18 @@ object FilterPanelCreator {
         val damageTypeRangeSliderFilterPanel = if(RFSettings.DamageTypeRangeSliderOrder != 0)
             innerPanel.createDamageTypeRangeSliderFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData) else null
 
-        if (!vanillaBuilt && sortedSpecPairs.isEmpty() && noItems == null) {
-            noItems = innerPanel.CustomPanel(PanelSize.exact(rowWidth, itemRowHeight)) {
-                val itemText = when(pickerPanelType) { PickerPanelType.Weapons -> "weapons" else -> "fighters" }
-                Text(" No $itemText matching filter", color = Misc.getBasePlayerColor(),
-                    modifier = Modifier.anchor(Anchor.inside.center.ofParent()))
-            }
-        }
-
         val activeFilterPanels = listOfNotNull(
             searchBarFilterPanel to RFSettings.ResetButtonSearchBarPanelOrder,
             existingFilters to RFSettings.VanillaWeaponAvailabilityWeaponSlotPanelOrder,
             weaponTypesFilterPanel?.let { it to RFSettings.WeaponTypePanelOrder },
             damageTypeRangeSliderFilterPanel?.let { it to RFSettings.DamageTypeRangeSliderOrder }
         ).filter { (_, order) -> order != 0 }.sortedBy { (_, order) -> order }.map { (panel, _) -> panel }
-
-        val itemsListHeight = when(sortedSpecPairs.size) {
-            in 0..6 -> itemRowHeight * sortedSpecPairs.size
-            else -> itemRowHeight * (6 + if(currentlySelected == null) 1 else 0)
-        }
-
-        var pickerHeight = itemsListHeight + 12f +
-                innerPanel.getChildrenCopy().filter { it !== itemsList }.sumOf { it.height.toDouble() }.toFloat()
+        if (activeFilterPanels.isEmpty()) return
 
         activeFilterPanels.forEachIndexed { index, filterPanel ->
             if(index == 0){
                 if (currentlyMountedText != null) {
                     filterPanel.position.belowLeft(currentlySelected, 5f)
-                    pickerHeight += 3
                 }
                 else {
                     filterPanel.yAlignOffset = innerPanel.top - filterPanel.top - 2f
@@ -158,14 +110,14 @@ object FilterPanelCreator {
 
         itemsList.position.belowLeft(activeFilterPanels.last(), 6f)
         noItems?.position?.belowLeft(activeFilterPanels.last(), 6f)
-
-        if (vanillaBuilt) return
-
-        if (pickerPanelType == PickerPanelType.Fighters) pickerPanel.position.width -= 5f
-
-        setPickerPanelHeight(pickerHeight, pickerPanel)
-        innerPanel.yAlignOffset = pickerPanel.top - innerPanel.top
     }
+
+    /** How well a fighter wing matches the search: its best fuzzy score over name, manufacturer and source mod. */
+    fun fighterSearchScore(search: String, spec: FighterWingSpecAPI): Int =
+        maxOf(FuzzySearch.fuzzyMatch(search, spec.wingName).second,
+            spec.variant?.hullSpec?.manufacturer?.let { FuzzySearch.fuzzyMatch(search, it).second } ?: 0,
+            spec.sourceMod?.let { FuzzySearch.fuzzyMatch(search, it.name).second } ?: 0
+        )
 
     /** How well a weapon matches the search: its best fuzzy score over name, manufacturer and source mod. */
     fun weaponSearchScore(search: String, spec: WeaponSpecAPI): Int =

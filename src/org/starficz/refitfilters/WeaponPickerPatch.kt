@@ -38,7 +38,7 @@ object WeaponPickerPatch {
     private fun injectPanels(context: AfterContext) {
         val picker = context.self as? UIPanelAPI ?: return
         val innerPanel = context.getMethod(GET_INNER_PANEL).call() as? UIPanelAPI ?: return
-        FilterPanelCreator.injectFilters(innerPanel, picker, PickerPanelType.Weapons, vanillaBuilt = true)
+        FilterPanelCreator.injectFilters(innerPanel, picker, PickerPanelType.Weapons)
     }
 
     @JvmStatic
