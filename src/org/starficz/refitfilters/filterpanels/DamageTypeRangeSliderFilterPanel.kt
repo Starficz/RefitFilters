@@ -8,18 +8,12 @@ import com.fs.starfarer.api.ui.UIPanelAPI
 import com.fs.starfarer.api.util.Misc
 import org.lazywizard.lazylib.opengl.ColorUtils.glColor
 import org.lwjgl.opengl.GL11
-import org.starficz.refitfilters.FilterData
-import org.starficz.refitfilters.linMap
+import org.starficz.refitfilters.*
 import org.starficz.refitfilters.PickerPanelHelpers.refreshPickerOn
-import org.starficz.refitfilters.RFSettings
-import org.starficz.refitfilters.WeaponFilterData
+import org.starficz.starui.*
 import org.starficz.starui.Alignment
-import org.starficz.starui.Anchor
 import org.starficz.starui.components.*
 import org.starficz.starui.modifier.*
-import org.starficz.starui.Size
-import org.starficz.starui.TextAlign
-import org.starficz.starui.UIState
 import org.starficz.starui.vanilla.*
 import java.awt.Color
 import kotlin.math.abs
@@ -47,9 +41,9 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
     val energyColor = Color(125, 194, 255)
     val fragColor = Color(255, 255, 131)
 
-    val refresh = with(filterData) {
-        Modifier.refreshPickerOn(pickerPanel, kineticDamage, heDamage, energyDamage, fragDamage, lowerRange, upperRange)
-    }
+    val watched = with(filterData) { mutableListOf<UIState<*>>(kineticDamage, heDamage, energyDamage, fragDamage, lowerRange, upperRange) }
+    if (filterData is WeaponFilterData) with(filterData) { watched += listOf(dpsLower, dpsUpper, dmgLower, dmgUpper, effLower, effUpper) }
+    val refresh = Modifier.refreshPickerOn(pickerPanel, *watched.toTypedArray())
 
     // Exact size: FilterPanelCreator adds up the panels' heights right after creating them, before the first layout.
     return Row(Size.exact(targetWidth, targetHeight), refresh, verticalAlignment = Alignment.CenterVertically, spacing = 1f) {
@@ -86,14 +80,135 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
         createDamageTypeButton(energyIconPath, energyColor, filterData.energyDamage, "Show energy damage.")
         createDamageTypeButton(fragmentationIconPath, fragColor, filterData.fragDamage, "Show fragmentation damage.")
 
-        Text("RANGE",
-            modifier = Modifier.padding(horizontal = 6f, vertical = 0f),
-            font = Font.VICTOR_14,
-            color = Misc.getTextColor(),
-            textAlign = TextAlign.Center
-        )
+        val range = StatSlider(SliderStat.RANGE, filterData.lowerRange, filterData.upperRange, minRange.toFloat(), maxRange.toFloat(),
+            rangeIncrement.toFloat(), rangeTickSnapping, { v -> if (v < 10000) v.toInt().toString() else "${v.toInt() / 1000}K" },
+            "Filters based on non-modified base range.")
 
-        RangeSlider(filterData, minRange, maxRange, rangeIncrement, rangeTickSnapping)
+        if (filterData is WeaponFilterData) {
+            // the selector picks what the slider filters; each stat keeps its own limits
+            fun scaled(stat: SliderStat, scale: StatScale, lower: UIState<Float>, upper: UIState<Float>, format: (Float) -> String, tooltip: String) =
+                StatSlider(stat, lower, upper, scale.min, scale.max, scale.step, true, format, tooltip, labelEvery = 5)
+            val stats = listOf(
+                range,
+                scaled(SliderStat.DPS, StatScale.DPS, filterData.dpsLower, filterData.dpsUpper, { v -> v.toInt().toString() },
+                    "Filters based on sustained damage per second."),
+                scaled(SliderStat.DMG, StatScale.DMG, filterData.dmgLower, filterData.dmgUpper, { v -> v.toInt().toString() },
+                    "Filters based on damage per shot."),
+                scaled(SliderStat.EFF, StatScale.EFF, filterData.effLower, filterData.effUpper, { v -> String.format("%.1f", v) },
+                    "Filters based on flux efficiency: damage per point of flux."),
+            )
+            Row(Size.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, spacing = 1f) {
+                val shown = stats.first { it.stat == filterData.sliderStat.value }
+                StatSelector(filterData, stats, targetHeight)
+                RangeSlider(shown)
+            }
+        } else {
+            Text("RANGE",
+                modifier = Modifier.padding(horizontal = 6f, vertical = 0f),
+                font = Font.VICTOR_14,
+                color = Misc.getTextColor(),
+                textAlign = TextAlign.Center
+            )
+            RangeSlider(range)
+        }
+    }
+}
+
+/** One stat the slider can show: its own range states, bounds, tick step and label format. */
+class StatSlider(
+    val stat: SliderStat, val lower: UIState<Float>, val upper: UIState<Float>,
+    val min: Float, val max: Float, val step: Float, val snapping: Boolean, val format: (Float) -> String, val tooltip: String,
+    /** Label every this many ticks; null: the ends and the thirds (range, whose ticks come from the settings). */
+    val labelEvery: Int? = null
+) {
+    val filtered: Boolean get() = lower.value > min || upper.value < max
+}
+
+/**
+ * The stat selector (a selector, not a filter toggle): the sort strip's dark fill in a frame, the stat between two
+ * small arrows, the pips in their own band below. Click the right half for the next stat, the left half or right-click
+ * for the one before. Pips: bright for the stat shown, yellow for every stat that filters.
+ */
+private fun UIPanelAPI.StatSelector(filterData: WeaponFilterData, stats: List<StatSlider>, height: Float) {
+    val width = 60f
+    fun step(by: Int) {
+        val all = SliderStat.values()
+        filterData.sliderStat.value = all[(filterData.sliderStat.value.ordinal + by + all.size) % all.size]
+        playSound("ui_button_pressed", 1f, 1f)
+    }
+    /** A 3 x 6 px arrowhead from whole-pixel columns (6, 4, 2 tall), so both sides come out the same. */
+    fun arrow(tipX: Float, centerY: Float, pointsRight: Boolean) {
+        val cx = tipX.toInt().toFloat()
+        val cy = centerY.toInt().toFloat()
+        for (i in 0..2) {
+            val half = 3f - i                        // heights 6, 4, 2 around the line between two pixel rows
+            val x = if (pointsRight) cx - 2 + i else cx + 2 - i
+            GL11.glRectf(x, cy + 1f - half, x + 1f, cy + 1f + half)
+        }
+    }
+    // where the cursor is over the selector, for the side highlight
+    var hoverX = 0f
+    lateinit var slider: CustomPanelAPI
+    val look = Modifier
+        .tooltip(330f, TooltipMakerAPI.TooltipLocation.ABOVE) {
+            addPara("Choose what the slider filters: range, DPS, damage per shot or flux efficiency.", 0f)
+            addPara("Click the right side for the next one, the left side or right-click for the one before.", 0f)
+            addPara("Every stat keeps its own limits, and all of them filter at once. A yellow mark below the name means that stat is filtering.",
+                0f, Misc.getTextColor(), Misc.getHighlightColor(), "yellow mark")
+        }
+        .onRenderBelow { alphaMult ->
+            GL11.glDisable(GL11.GL_TEXTURE_2D)
+            glColor(Misc.getDarkPlayerColor().darker().darker(), alphaMult, false)
+            GL11.glRectf(left, bottom, right, top)
+            if (isHovering) {
+                // the half a click would use lights up, fading out towards the other side: left goes back, right forward
+                val leftSide = hoverX < left + this.width / 2f
+                val c = Misc.getDarkPlayerColor()
+                val (r, g, b) = Triple(c.red / 255f, c.green / 255f, c.blue / 255f)
+                val litX = if (leftSide) left else right
+                val fadedX = if (leftSide) right else left
+                GL11.glEnable(GL11.GL_BLEND)
+                GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA)
+                GL11.glBegin(GL11.GL_QUADS)
+                GL11.glColor4f(r, g, b, alphaMult); GL11.glVertex2f(litX, bottom); GL11.glVertex2f(litX, top)
+                GL11.glColor4f(r, g, b, 0f); GL11.glVertex2f(fadedX, top); GL11.glVertex2f(fadedX, bottom)
+                GL11.glEnd()
+            }
+            GL11.glEnable(GL11.GL_TEXTURE_2D)
+        }
+        .onHover { event -> hoverX = event.x.toFloat() }
+        .border(Misc.getDarkPlayerColor())
+        .onRender { alphaMult ->
+            GL11.glDisable(GL11.GL_TEXTURE_2D)
+            // the arrows, level with the label
+            val cy = top - 10.5f
+            glColor(Misc.getBasePlayerColor(), alphaMult * 0.8f, false)
+            arrow(left + 4f, cy, false)
+            arrow(right - 5f, cy, true)
+            // the pips
+            val pipW = 5f; val pipH = 2f; val gap = 3f
+            val total = stats.size * pipW + (stats.size - 1) * gap
+            var x = left + ((this.width - total) / 2f).toInt()
+            val y = bottom + 5f   // centred between the label and the frame
+            for (s in stats) {
+                val color = when {
+                    s.filtered -> Misc.getHighlightColor()
+                    s.stat == filterData.sliderStat.value -> Misc.getBrightPlayerColor()
+                    else -> Misc.getDarkPlayerColor()
+                }
+                glColor(color, alphaMult, false)
+                GL11.glRectf(x, y, x + pipW, y + pipH)
+                x += pipW + gap
+            }
+            GL11.glEnable(GL11.GL_TEXTURE_2D)
+        }
+        .onClick { event ->
+            if (event.isRMBDownEvent) step(-1)
+            else if (event.isLMBDownEvent) step(if (event.x < slider.left + slider.width / 2f) -1 else 1)
+        }
+    slider = Box(Size.exact(width, height), look) {
+        Text(filterData.sliderStat.value.label, font = Font.VICTOR_14, color = Misc.getBasePlayerColor(),
+            modifier = Modifier.align(Alignment.TopCenter).margin(top = 1f))   // its line box puts the glyphs 7 px down, level with the arrows
     }
 }
 
@@ -101,7 +216,13 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
  * Two handles on one bar of ticks [rangeIncrement] apart; a click or drag moves the handle nearer the cursor. Drawn
  * by hand: StarUI's Slider is vanilla's single-value slider.
  */
-private fun UIPanelAPI.RangeSlider(filterData: FilterData, minRange: Int, maxRange: Int, rangeIncrement: Int, rangeTickSnapping: Boolean) {
+private fun UIPanelAPI.RangeSlider(stat: StatSlider) {
+    val minRange = stat.min
+    val maxRange = stat.max
+    val rangeIncrement = stat.step
+    val rangeTickSnapping = stat.snapping
+    val lowerState = stat.lower
+    val upperState = stat.upper
     var lowerNodeHovered = false
     var upperNodeHovered = false
 
@@ -117,7 +238,7 @@ private fun UIPanelAPI.RangeSlider(filterData: FilterData, minRange: Int, maxRan
     val tickHeight = 5f
     val nodeSize = 4f
 
-    val numOfTicks = ((maxRange - minRange) / rangeIncrement)
+    val numOfTicks = ((maxRange - minRange) / rangeIncrement).roundToInt()
     val maxSliderRange = minRange + numOfTicks * rangeIncrement
     val sliderTickRanges = (0..numOfTicks).map { it * rangeIncrement + minRange }
 
@@ -146,22 +267,22 @@ private fun UIPanelAPI.RangeSlider(filterData: FilterData, minRange: Int, maxRan
     /** Whether the lower handle is the one nearer [event] (a tie goes to the lower one). */
     fun lowerIsNearer(event: InputEventAPI, offsets: List<Int>): Boolean {
         val nodeStartCenterXPos = slider.left + minBarLeftPad + tickThickness / 2
-        val lowerNodeXPos = mapRangeToXOffset(filterData.lowerRange.value, offsets) + nodeStartCenterXPos
-        val upperNodeXPos = mapRangeToXOffset(filterData.upperRange.value, offsets) + nodeStartCenterXPos
+        val lowerNodeXPos = mapRangeToXOffset(lowerState.value, offsets) + nodeStartCenterXPos
+        val upperNodeXPos = mapRangeToXOffset(upperState.value, offsets) + nodeStartCenterXPos
         return abs(lowerNodeXPos - event.x) <= abs(upperNodeXPos - event.x)
     }
 
     // Four tick labels (each with its tick's index), placed once the slider's width is known (onLayout).
-    val labelledTicks = listOf(0, ((sliderTickRanges.size - 1) / 3f).roundToInt(),
-        ((sliderTickRanges.size - 1) * 2 / 3f).roundToInt(), sliderTickRanges.size - 1)
+    val labelledTicks = stat.labelEvery?.let { every -> (0..numOfTicks step every).toList() }
+        ?: listOf(0, ((sliderTickRanges.size - 1) / 3f).roundToInt(), ((sliderTickRanges.size - 1) * 2 / 3f).roundToInt(), sliderTickRanges.size - 1)
     val tickLabels = mutableListOf<Pair<LabelAPI, Int>>()
 
     val sliderModifier = Modifier
         .tooltip(370f, TooltipMakerAPI.TooltipLocation.ABOVE) {
-            addPara("Filters based on non-modified base range.", 0f)
+            addPara(stat.tooltip, 0f)
             addPara("Click anywhere within the slider to move the nearest point.", 0f)
-            addPara("Setting the maximum to $maxRange makes the upper limit infinite.",
-                0f, Misc.getTextColor(), Misc.getHighlightColor(), "$maxRange")
+            addPara("Setting the maximum to ${stat.format(maxRange)} makes the upper limit infinite.",
+                0f, Misc.getTextColor(), Misc.getHighlightColor(), stat.format(maxRange))
         }
         // The black backing reaches 4 px below the panel (onRenderBelow), so clicks there count too.
         .hitBoxPadding(bottom = 4f)
@@ -194,8 +315,8 @@ private fun UIPanelAPI.RangeSlider(filterData: FilterData, minRange: Int, maxRan
             }
 
             val nodeStartXPos = left + minBarLeftPad + tickThickness / 2 - nodeSize / 2
-            val lowerNodeXPos = mapRangeToXOffset(filterData.lowerRange.value, offsets) + nodeStartXPos
-            val upperNodeXPos = mapRangeToXOffset(filterData.upperRange.value, offsets) + nodeStartXPos
+            val lowerNodeXPos = mapRangeToXOffset(lowerState.value, offsets) + nodeStartXPos
+            val upperNodeXPos = mapRangeToXOffset(upperState.value, offsets) + nodeStartXPos
 
             glColor(lineBrightColor, alphaMult, false)
             GL11.glRectf(lowerNodeXPos + nodeSize, bottomOfBar, upperNodeXPos, topOfBar)
@@ -225,17 +346,17 @@ private fun UIPanelAPI.RangeSlider(filterData: FilterData, minRange: Int, maxRan
         .onMouseHeld { event ->
             val offsets = tickXOffsets(slider.width)
             val nodeStartCenterXPos = slider.left + minBarLeftPad + tickThickness / 2
-            var newLower = filterData.lowerRange.value
-            var newUpper = filterData.upperRange.value
+            var newLower = lowerState.value
+            var newUpper = upperState.value
 
             if (lowerIsNearer(event, offsets)) newLower = mapXPosToRange(event.x.toFloat(), nodeStartCenterXPos, offsets)
             else newUpper = mapXPosToRange(event.x.toFloat(), nodeStartCenterXPos, offsets)
 
-            if (abs(filterData.upperRange.value - newUpper) > rangeIncrement / 4 ||
-                abs(filterData.lowerRange.value - newLower) > rangeIncrement / 4) {
+            if (abs(upperState.value - newUpper) > rangeIncrement / 4 ||
+                abs(lowerState.value - newLower) > rangeIncrement / 4) {
                 if (rangeTickSnapping) playSound("ui_number_scrolling", 1f, 0.8f)
-                filterData.lowerRange.value = newLower
-                filterData.upperRange.value = newUpper
+                lowerState.value = newLower
+                upperState.value = newUpper
             }
         }
 
@@ -243,7 +364,7 @@ private fun UIPanelAPI.RangeSlider(filterData: FilterData, minRange: Int, maxRan
         tickLabels.clear()
         for (tick in labelledTicks) {
             val value = sliderTickRanges[tick]
-            val text = if (value < 10000) value.toString() else "${value / 1000}K"
+            val text = stat.format(value)
             tickLabels += Text(text, font = Font.VICTOR_14, color = Misc.getTextColor()) to tick
         }
     }

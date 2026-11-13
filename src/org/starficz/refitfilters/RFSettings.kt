@@ -13,6 +13,7 @@ object RFSettings : LunaSettingsListener {
     var VanillaWeaponAvailabilityWeaponSlotPanelOrder = LunaSettings.getInt(modID, "refitfilters_vanillaWeaponAvailabilityWeaponSlotPanelOrder")!!
     var WeaponTypePanelOrder = LunaSettings.getInt(modID, "refitfilters_weaponTypePanelOrder")!!
     var DamageTypeRangeSliderOrder = LunaSettings.getInt(modID, "refitfilters_damageTypeRangeSliderOrder")!!
+    var sortRowEnabled = LunaSettings.getBoolean(modID, "refitfilters_sortRow")!!
 
     var weaponMinRange = LunaSettings.getInt(modID, "refitfilters_weaponMinRange")!!
     var weaponMaxRange = LunaSettings.getInt(modID, "refitfilters_weaponMaxRange")!!
@@ -36,6 +37,7 @@ object RFSettings : LunaSettingsListener {
             VanillaWeaponAvailabilityWeaponSlotPanelOrder = LunaSettings.getInt(RFSettings.modID, "refitfilters_vanillaWeaponAvailabilityWeaponSlotPanelOrder")!!
             WeaponTypePanelOrder = LunaSettings.getInt(RFSettings.modID, "refitfilters_weaponTypePanelOrder")!!
             DamageTypeRangeSliderOrder = LunaSettings.getInt(RFSettings.modID, "refitfilters_damageTypeRangeSliderOrder")!!
+            sortRowEnabled = LunaSettings.getBoolean(RFSettings.modID, "refitfilters_sortRow")!!
 
             weaponMinRange = LunaSettings.getInt(RFSettings.modID, "refitfilters_weaponMinRange")!!
             weaponMaxRange = LunaSettings.getInt(RFSettings.modID, "refitfilters_weaponMaxRange")!!

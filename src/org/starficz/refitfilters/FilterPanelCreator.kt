@@ -1,20 +1,18 @@
 package org.starficz.refitfilters
 
-import com.fs.starfarer.api.Global
 import com.fs.starfarer.api.combat.DamageType
 import com.fs.starfarer.api.combat.WeaponAPI
+import com.fs.starfarer.api.Global
 import com.fs.starfarer.api.loading.FighterWingSpecAPI
 import com.fs.starfarer.api.loading.WeaponSpecAPI
 import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
-import org.starficz.refitfilters.filterpanels.createDamageTypeRangeSliderFilterPanel
-import org.starficz.refitfilters.filterpanels.createSearchBarFilterPanel
-import org.starficz.refitfilters.filterpanels.createWeaponTypesFilterPanel
+import org.starficz.refitfilters.filterpanels.*
 import org.starficz.refitfilters.ReflectionUtils.getMethodsMatching
 import org.starficz.starui.AreaCheckboxTheme
-import org.starficz.starui.StarUITheme
 import org.starficz.starui.components.Theme
 import org.starficz.starui.runtime.StarUIPanelPlugin
+import org.starficz.starui.StarUITheme
 import org.starficz.starui.vanilla.*
 
 enum class PickerPanelType {
@@ -40,6 +38,9 @@ object FilterPanelCreator {
         ))
     }
 
+    /** Whether this picker gets the sort row: weapons only, when the setting allows it. Always last, on the list. */
+    private fun hasSortRow(pickerPanelType: PickerPanelType) = pickerPanelType == PickerPanelType.Weapons && RFSettings.sortRowEnabled
+
     /** The panels and their order, as the settings ask: vanilla's own filter bar is `null` here. */
     private fun panelOrder(pickerPanelType: PickerPanelType): List<Pair<String?, Int>> = listOfNotNull(
         "search" to RFSettings.ResetButtonSearchBarPanelOrder,
@@ -50,15 +51,18 @@ object FilterPanelCreator {
 
     /**
      * How much taller the picker gets from the injected panels, for vanilla's own height sum (see WeaponPickerPatch):
-     * every panel row, the 1 px gaps between them (none below vanilla's bar), and the list's 6 px gap where vanilla
-     * left 1 px below its bar.
+     * every panel row, the 1 px gaps between them (none below vanilla's bar), the sort row with the space above it,
+     * and the list's gap below the last panel (6 px, or the sort row's own) where vanilla left 1 px below its bar.
      */
     fun injectedExtraHeight(pickerPanelType: PickerPanelType): Float {
         val order = panelOrder(pickerPanelType)
         val ownPanels = order.count { it.first != null }
-        if (ownPanels == 0) return 0f
+        val sortRow = hasSortRow(pickerPanelType)
+        if (ownPanels == 0 && !sortRow) return 0f
         val gaps = order.zipWithNext().count { (prev, _) -> prev.first != null }
-        return ownPanels * filterRowHeight + gaps + 6f - 1f
+        val sort = if (sortRow) SORT_ROW_GAP + SORT_PANEL_HEIGHT else 0f
+        val listGap = if (sortRow) SORT_LIST_GAP else 6f
+        return ownPanels * filterRowHeight + gaps + sort + listGap - 1f
     }
 
     /**
@@ -89,12 +93,15 @@ object FilterPanelCreator {
         lateinit var searchBarFilterPanel: CustomPanelAPI
         var weaponTypesFilterPanel: CustomPanelAPI? = null
         var damageTypeRangeSliderFilterPanel: CustomPanelAPI? = null
+        var sortPanel: CustomPanelAPI? = null
         innerPanel.Theme(filterTheme()) {
             searchBarFilterPanel = createSearchBarFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
             if (RFSettings.WeaponTypePanelOrder != 0 && filterData is WeaponFilterData)
                 weaponTypesFilterPanel = createWeaponTypesFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
             if (RFSettings.DamageTypeRangeSliderOrder != 0)
                 damageTypeRangeSliderFilterPanel = createDamageTypeRangeSliderFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
+            if (hasSortRow(pickerPanelType) && filterData is WeaponFilterData)
+                sortPanel = createSortPanel(rowWidth, pickerPanel, filterData)
         }
 
         val activeFilterPanels = listOfNotNull(
@@ -102,7 +109,8 @@ object FilterPanelCreator {
             existingFilters to RFSettings.VanillaWeaponAvailabilityWeaponSlotPanelOrder,
             weaponTypesFilterPanel?.let { it to RFSettings.WeaponTypePanelOrder },
             damageTypeRangeSliderFilterPanel?.let { it to RFSettings.DamageTypeRangeSliderOrder }
-        ).filter { (_, order) -> order != 0 }.sortedBy { (_, order) -> order }.map { (panel, _) -> panel }
+        ).filter { (_, order) -> order != 0 }.sortedBy { (_, order) -> order }.map { (panel, _) -> panel } +
+            listOfNotNull(sortPanel)
         if (activeFilterPanels.isEmpty()) return
 
         activeFilterPanels.forEachIndexed { index, filterPanel ->
@@ -116,13 +124,15 @@ object FilterPanelCreator {
                 }
             }
             else{
-                val pad = if(activeFilterPanels[index-1] === existingFilters) 0f else 1f
+                val pad = if (filterPanel === sortPanel) SORT_ROW_GAP
+                          else if (activeFilterPanels[index-1] === existingFilters) 0f else 1f
                 filterPanel.position.belowLeft(activeFilterPanels[index-1], pad)
             }
         }
 
-        itemsList.position.belowLeft(activeFilterPanels.last(), 6f)
-        noItems?.position?.belowLeft(activeFilterPanels.last(), 6f)
+        val listGap = if (sortPanel != null) SORT_LIST_GAP else 6f
+        itemsList.position.belowLeft(activeFilterPanels.last(), listGap)
+        noItems?.position?.belowLeft(activeFilterPanels.last(), listGap)
     }
 
     /** How well a fighter wing matches the search: its best fuzzy score over name, manufacturer and source mod. */
@@ -159,6 +169,10 @@ object FilterPanelCreator {
 
             if (weaponSpec.maxRange < lowerRange.value && lowerRange.value.toInt() != RFSettings.weaponMinRange) return true
             if (weaponSpec.maxRange > upperRange.value && upperRange.value.toInt() != RFSettings.weaponMaxRange) return true
+
+            if (WeaponStats.outside(WeaponStats.dps(weaponSpec), dpsLower.value, dpsUpper.value, StatScale.DPS)) return true
+            if (WeaponStats.outside(WeaponStats.damagePerShot(weaponSpec), dmgLower.value, dmgUpper.value, StatScale.DMG)) return true
+            if (WeaponStats.outside(WeaponStats.efficiency(weaponSpec), effLower.value, effUpper.value, StatScale.EFF)) return true
 
             if (RFSettings.searchBarBehaviour != "Sort" && currentSearch.value.isNotEmpty()) {
                 val searchByDesignType = RFSettings.searchByDesignType

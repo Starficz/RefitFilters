@@ -65,7 +65,8 @@ object WeaponPickerPatch {
     }
 
     /**
-     * Vanilla sorts after filtering, so the search ranking goes after its sort (stable: vanilla's order breaks ties).
+     * Vanilla sorts after filtering, so the sort row's order and the search ranking go after its sort (both stable:
+     * the order before them breaks ties).
      * Host: the class's no-arg void methods; only the build method calls Collections.sort.
      */
     // 0.98.5a-RC4 Windows: host is private void interface()
@@ -78,10 +79,13 @@ object WeaponPickerPatch {
     fun afterVanillaSort(context: MethodCallContext) {
         context.call()
         context.setResult(null)
-        val search = FilterPanelCreator.weaponFilterData.currentSearch.value
-        if (RFSettings.searchBarBehaviour == "Filter" || search.isBlank()) return
         @Suppress("UNCHECKED_CAST")
         val items = context.getCallArg(0) as? MutableList<Any?> ?: return
+        val data = FilterPanelCreator.weaponFilterData
+        // the sort row's order (none when the row is off: vanilla's stays), then the search ranking on top of it
+        if (RFSettings.sortRowEnabled) WeaponStats.sort(items, data.sortKey.value, data.sortDescending.value)
+        val search = data.currentSearch.value
+        if (RFSettings.searchBarBehaviour == "Filter" || search.isBlank()) return
         items.sortWith(compareByDescending { item ->
             (item as? AutofitPlugin.AvailableWeapon)?.spec?.let { FilterPanelCreator.weaponSearchScore(search, it) } ?: 0
         })

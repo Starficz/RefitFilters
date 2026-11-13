@@ -11,6 +11,7 @@ refitfilters_resetButtonSearchBarPanelOrder,Reset Button/Search Bar Filter Locat
 refitfilters_vanillaWeaponAvailabilityWeaponSlotPanelOrder,Availability/Weapon Slot Filter Location,Int,2,,"Location of the vanilla Weapon Availability/Weapon Slot filter Panel, 1 being the top, 4 at the bottom.",1,4,
 refitfilters_weaponTypePanelOrder,Weapon Type Filter Location,Int,3,,"Location of the Weapon Type filter Panel, 1 being the top, 4 at the bottom. 0 to disable.",0,4,
 refitfilters_damageTypeRangeSliderOrder,Damage Type/Range Slider Filter Location,Int,4,,"Location of the Damage Type/Range Slider filter Panel, 1 being the top, 4 at the bottom. 0 to disable.",0,4,
+refitfilters_sortRow,Sort Row,Boolean,true,,"Shows the SORT BY row above the weapon list: sort by name, OP, range, damage per shot, DPS or flux efficiency. Click a sort again to reverse it. Off: vanilla's order.",,,
 ,,,,,,,,
 refitfilters_weaponRangeslider_header,Weapon Range Slider,Header,Weapon Range Slider,,,,,
 refitfilters_weaponMinRange,Range Slider Min Range,Int,0,,"The lower end of the range slider. Setting the range slider to this value includes all lower ranges.",0,99000,
