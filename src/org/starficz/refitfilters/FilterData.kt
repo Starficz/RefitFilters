@@ -1,65 +1,41 @@
 package org.starficz.refitfilters
 
-import org.starficz.starui.compose.runtime.UIState
+import org.starficz.starui.UIState
+import org.starficz.starui.mutableStateOf
 
-abstract class FilterData(
-    val kineticDamage: UIState<Boolean> = UIState(true),
-    val heDamage: UIState<Boolean> = UIState(true),
-    val energyDamage: UIState<Boolean> = UIState(true),
-    val fragDamage: UIState<Boolean> = UIState(true),
-    val lowerRange: UIState<Float>,
-    val upperRange: UIState<Float>,
-    val currentSearch: UIState<String> = UIState("")
-) {
-    protected fun resetCommonFields(defaultLower: Float, defaultUpper: Float) {
-        kineticDamage.value = true
-        heDamage.value = true
-        energyDamage.value = true
-        fragDamage.value = true
-        lowerRange.value = defaultLower
-        upperRange.value = defaultUpper
-        currentSearch.value = ""
-    }
+/** The filters' state, shared by every picker of one kind. Each state is declared once with its default; [reset] restores them all. */
+abstract class FilterData(defaultLowerRange: () -> Float, defaultUpperRange: () -> Float) {
+    private val resets = mutableListOf<() -> Unit>()
 
-    abstract fun reset()
+    /** A state that [reset] sets back to [default] (read again at each reset, so changed settings apply). */
+    protected fun <T> state(default: () -> T): UIState<T> =
+        mutableStateOf(default()).also { state -> resets += { state.value = default() } }
+
+    protected fun <T> state(default: T): UIState<T> = state { default }
+
+    val kineticDamage = state(true)
+    val heDamage = state(true)
+    val energyDamage = state(true)
+    val fragDamage = state(true)
+    val lowerRange = state(defaultLowerRange)
+    val upperRange = state(defaultUpperRange)
+    val currentSearch = state("")
+
+    fun reset() = resets.forEach { it() }
 }
 
-class WeaponFilterData: FilterData(
-    lowerRange = UIState(RFSettings.weaponMinRange.toFloat()),
-    upperRange = UIState(RFSettings.weaponMaxRange.toFloat())
-) {
-    val projectileWeapons = UIState(true)
-    val beamWeapons = UIState(true)
-    val pdWeapons = UIState(true)
-    val nonpdWeapons = UIState(true)
-    val ammoWeapons = UIState(true)
-    val nonAmmoWeapons = UIState(true)
-
-    override fun reset() {
-        resetCommonFields(RFSettings.weaponMinRange.toFloat(), RFSettings.weaponMaxRange.toFloat())
-        projectileWeapons.value = true
-        beamWeapons.value = true
-        pdWeapons.value = true
-        nonpdWeapons.value = true
-        ammoWeapons.value = true
-        nonAmmoWeapons.value = true
-    }
+class WeaponFilterData : FilterData({ RFSettings.weaponMinRange.toFloat() }, { RFSettings.weaponMaxRange.toFloat() }) {
+    val projectileWeapons = state(true)
+    val beamWeapons = state(true)
+    val pdWeapons = state(true)
+    val nonpdWeapons = state(true)
+    val ammoWeapons = state(true)
+    val nonAmmoWeapons = state(true)
 }
 
-class FighterFilterData: FilterData(
-    lowerRange = UIState(RFSettings.fighterMinRange.toFloat()),
-    upperRange = UIState(RFSettings.fighterMaxRange.toFloat())
-) {
-    val supportWing = UIState(true)
-    val fighterWing = UIState(true)
-    val bomberWing = UIState(true)
-    val interceptorWing = UIState(true)
-
-    override fun reset() {
-        resetCommonFields(RFSettings.fighterMinRange.toFloat(), RFSettings.fighterMaxRange.toFloat())
-        supportWing.value = true
-        fighterWing.value = true
-        bomberWing.value = true
-        interceptorWing.value = true
-    }
+class FighterFilterData : FilterData({ RFSettings.fighterMinRange.toFloat() }, { RFSettings.fighterMaxRange.toFloat() }) {
+    val supportWing = state(true)
+    val fighterWing = state(true)
+    val bomberWing = state(true)
+    val interceptorWing = state(true)
 }

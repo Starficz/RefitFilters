@@ -1,21 +1,18 @@
 package org.starficz.refitfilters
 
 import com.fs.starfarer.api.campaign.CoreUITabId
-import org.starficz.starui.compose.Alignment
 import com.fs.starfarer.api.ui.CutStyle
 import com.fs.starfarer.api.ui.UIComponentAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
-import org.starficz.starui.compose.Size
-import org.starficz.starui.compose.components.Button
-import org.starficz.starui.compose.modifier.Modifier
-import org.starficz.starui.compose.modifier.anchor
-import org.starficz.starui.compose.runtime.DynamicInjection
-import org.starficz.starui.compose.runtime.StarUIManager
-import org.starficz.starui.core.Anchor
-import org.starficz.starui.core.Font
-import org.starficz.starui.core.children
-import org.starficz.refitfilters.ReflectionUtils.getMethodsMatching
 import org.starficz.refitfilters.ReflectionUtils.invoke
+import org.starficz.starui.Anchor
+import org.starficz.starui.components.Button
+import org.starficz.starui.DynamicInjection
+import org.starficz.starui.modifier.anchor
+import org.starficz.starui.modifier.Modifier
+import org.starficz.starui.Size
+import org.starficz.starui.StarUIManager
+import org.starficz.starui.vanilla.children
 
 abstract class BaseCargoInjection : DynamicInjection {
     // Determine whether to fetch the player's side or the market's side

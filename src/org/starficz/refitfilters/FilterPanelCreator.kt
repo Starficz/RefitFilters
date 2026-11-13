@@ -1,21 +1,21 @@
 package org.starficz.refitfilters
 
+import com.fs.starfarer.api.Global
 import com.fs.starfarer.api.combat.DamageType
 import com.fs.starfarer.api.combat.WeaponAPI
 import com.fs.starfarer.api.loading.FighterWingSpecAPI
 import com.fs.starfarer.api.loading.WeaponSpecAPI
 import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
-import org.starficz.starui.compose.runtime.StarUIPanelPlugin
-import org.starficz.starui.core.getChildrenCopy
-import org.starficz.starui.core.height
-import org.starficz.starui.core.top
-import org.starficz.starui.core.xAlignOffset
-import org.starficz.starui.core.yAlignOffset
-import org.starficz.refitfilters.ReflectionUtils.getMethodsMatching
 import org.starficz.refitfilters.filterpanels.createDamageTypeRangeSliderFilterPanel
 import org.starficz.refitfilters.filterpanels.createSearchBarFilterPanel
 import org.starficz.refitfilters.filterpanels.createWeaponTypesFilterPanel
+import org.starficz.refitfilters.ReflectionUtils.getMethodsMatching
+import org.starficz.starui.AreaCheckboxTheme
+import org.starficz.starui.StarUITheme
+import org.starficz.starui.components.Theme
+import org.starficz.starui.runtime.StarUIPanelPlugin
+import org.starficz.starui.vanilla.*
 
 enum class PickerPanelType {
     Weapons,
@@ -30,6 +30,15 @@ object FilterPanelCreator {
     val weaponFilterData = WeaponFilterData()
     val fighterFilterData = FighterFilterData()
 
+
+    /** The filter panels' checkboxes: the player faction's colours a step darker, in the small font. */
+    private fun filterTheme(): StarUITheme {
+        val bright = Global.getSettings().basePlayerColor
+        val base = bright.darker()
+        return StarUITheme(areaCheckbox = AreaCheckboxTheme(
+            baseColor = base, darkColor = base.darker().darker(), brightColor = bright, font = Font.VICTOR_14
+        ))
+    }
 
     /** The panels and their order, as the settings ask: vanilla's own filter bar is `null` here. */
     private fun panelOrder(pickerPanelType: PickerPanelType): List<Pair<String?, Int>> = listOfNotNull(
@@ -63,7 +72,7 @@ object FilterPanelCreator {
             PickerPanelType.Fighters -> fighterFilterData
         }
 
-        val uiElements = innerPanel.getChildrenCopy()
+        val uiElements = innerPanel.children
         if (uiElements.any { it is CustomPanelAPI && it.plugin is StarUIPanelPlugin }) return
 
         // vanilla's children, in the order its build adds them:
@@ -77,12 +86,16 @@ object FilterPanelCreator {
         val itemsList = uiElements.getOrNull(existingFiltersIndex+1) ?: return
         val noItems = uiElements.getOrNull(existingFiltersIndex+2)
 
-        val searchBarFilterPanel =
-            innerPanel.createSearchBarFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
-        val weaponTypesFilterPanel = if(RFSettings.WeaponTypePanelOrder != 0 && filterData is WeaponFilterData)
-            innerPanel.createWeaponTypesFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData) else null
-        val damageTypeRangeSliderFilterPanel = if(RFSettings.DamageTypeRangeSliderOrder != 0)
-            innerPanel.createDamageTypeRangeSliderFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData) else null
+        lateinit var searchBarFilterPanel: CustomPanelAPI
+        var weaponTypesFilterPanel: CustomPanelAPI? = null
+        var damageTypeRangeSliderFilterPanel: CustomPanelAPI? = null
+        innerPanel.Theme(filterTheme()) {
+            searchBarFilterPanel = createSearchBarFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
+            if (RFSettings.WeaponTypePanelOrder != 0 && filterData is WeaponFilterData)
+                weaponTypesFilterPanel = createWeaponTypesFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
+            if (RFSettings.DamageTypeRangeSliderOrder != 0)
+                damageTypeRangeSliderFilterPanel = createDamageTypeRangeSliderFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
+        }
 
         val activeFilterPanels = listOfNotNull(
             searchBarFilterPanel to RFSettings.ResetButtonSearchBarPanelOrder,

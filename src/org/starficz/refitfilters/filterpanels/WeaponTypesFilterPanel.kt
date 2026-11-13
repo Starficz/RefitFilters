@@ -1,38 +1,32 @@
 package org.starficz.refitfilters.filterpanels
 
-import com.fs.starfarer.api.Global
 import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.TooltipMakerAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
 import org.starficz.refitfilters.PickerPanelHelpers.refreshPickerOn
 import org.starficz.refitfilters.WeaponFilterData
-import org.starficz.starui.compose.Size
-import org.starficz.starui.compose.components.AreaCheckbox
-import org.starficz.starui.compose.components.Row
-import org.starficz.starui.compose.Alignment
-import org.starficz.starui.compose.modifier.Modifier
-import org.starficz.starui.compose.modifier.tooltip
-import org.starficz.starui.compose.runtime.ButtonGroup
-import org.starficz.starui.compose.runtime.UIState
-import org.starficz.starui.core.Font
+import org.starficz.starui.Alignment
+import org.starficz.starui.components.AreaCheckbox
+import org.starficz.starui.components.ButtonGroup
+import org.starficz.starui.components.Row
+import org.starficz.starui.modifier.Modifier
+import org.starficz.starui.modifier.tooltip
+import org.starficz.starui.Size
+import org.starficz.starui.UIState
 
+/** PROJ / BEAM, PD / NON-PD, AMMO / NON-AMMO: three button pairs, each its own group. Colours and font: the filter theme. */
 fun UIPanelAPI.createWeaponTypesFilterPanel(
     targetWidth: Float,
     targetHeight: Float,
     pickerPanel: UIPanelAPI,
     filterData: WeaponFilterData
-): CustomPanelAPI {
-
-    val brightColor = Global.getSettings().basePlayerColor
-    val baseColor = brightColor.darker()
-    val bgColor = baseColor.darker().darker()
-
+): CustomPanelAPI = with(filterData) {
     // Exact size: FilterPanelCreator adds up the panels' heights right after creating them, before the first layout.
-    return Row(Size.exact(targetWidth, targetHeight), verticalAlignment = Alignment.CenterVertically, spacing = 1f) {
-        with(filterData) {
-            refreshPickerOn(pickerPanel, projectileWeapons, beamWeapons, pdWeapons, nonpdWeapons, ammoWeapons, nonAmmoWeapons)
-        }
-
+    Row(
+        Size.exact(targetWidth, targetHeight),
+        Modifier.refreshPickerOn(pickerPanel, projectileWeapons, beamWeapons, pdWeapons, nonpdWeapons, ammoWeapons, nonAmmoWeapons),
+        verticalAlignment = Alignment.CenterVertically, spacing = 1f
+    ) {
         val beamGroup = ButtonGroup()
         val pdGroup = ButtonGroup()
         val ammoGroup = ButtonGroup()
@@ -42,16 +36,15 @@ fun UIPanelAPI.createWeaponTypesFilterPanel(
             AreaCheckbox(
                 text, state, Size.exact(width, targetHeight),
                 Modifier.tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) { addPara(tooltipText, 0f) },
-                baseColor = baseColor, darkColor = bgColor, brightColor = brightColor, font = Font.VICTOR_14,
                 buttonGroup = group
             )
         }
 
-        typeButton("PROJ", buttonWidth, filterData.projectileWeapons, beamGroup, "Show projectile weapons.")
-        typeButton("BEAM", buttonWidth, filterData.beamWeapons, beamGroup, "Show beam weapons.")
-        typeButton("PD", buttonWidth - 10f, filterData.pdWeapons, pdGroup, "Show point defense weapons.")
-        typeButton("NON-PD", buttonWidth + 10f, filterData.nonpdWeapons, pdGroup, "Show weapons that aren't point defense.")
-        typeButton("AMMO", buttonWidth - 10f, filterData.ammoWeapons, ammoGroup, "Show weapons that use ammo.")
-        typeButton("NON-AMMO", buttonWidth + 10f, filterData.nonAmmoWeapons, ammoGroup, "Show weapons that don't use ammo.")
+        typeButton("PROJ", buttonWidth, projectileWeapons, beamGroup, "Show projectile weapons.")
+        typeButton("BEAM", buttonWidth, beamWeapons, beamGroup, "Show beam weapons.")
+        typeButton("PD", buttonWidth - 10f, pdWeapons, pdGroup, "Show point defense weapons.")
+        typeButton("NON-PD", buttonWidth + 10f, nonpdWeapons, pdGroup, "Show weapons that aren't point defense.")
+        typeButton("AMMO", buttonWidth - 10f, ammoWeapons, ammoGroup, "Show weapons that use ammo.")
+        typeButton("NON-AMMO", buttonWidth + 10f, nonAmmoWeapons, ammoGroup, "Show weapons that don't use ammo.")
     }
 }

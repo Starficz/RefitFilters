@@ -1,41 +1,26 @@
 package org.starficz.refitfilters.filterpanels
 
-import org.starficz.starui.compose.modifier.padding
+import com.fs.starfarer.api.input.InputEventAPI
 import com.fs.starfarer.api.ui.CustomPanelAPI
+import com.fs.starfarer.api.ui.LabelAPI
 import com.fs.starfarer.api.ui.TooltipMakerAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
 import com.fs.starfarer.api.util.Misc
 import org.lazywizard.lazylib.opengl.ColorUtils.glColor
 import org.lwjgl.opengl.GL11
 import org.starficz.refitfilters.FilterData
+import org.starficz.refitfilters.linMap
 import org.starficz.refitfilters.PickerPanelHelpers.refreshPickerOn
 import org.starficz.refitfilters.RFSettings
 import org.starficz.refitfilters.WeaponFilterData
-import org.starficz.starui.compose.ImageSize
-import org.starficz.starui.compose.Size
-import org.starficz.starui.compose.components.AreaCheckbox
-import org.starficz.starui.compose.components.CustomPanel
-import org.starficz.starui.compose.components.Image
-import org.starficz.starui.compose.components.Row
-import org.starficz.starui.compose.components.Text
-import org.starficz.starui.compose.Alignment
-import org.starficz.starui.compose.modifier.Modifier
-import org.starficz.starui.compose.modifier.anchor
-import org.starficz.starui.compose.modifier.tooltip
-import org.starficz.starui.compose.runtime.ButtonGroup
-import org.starficz.starui.compose.runtime.StarUIPanelPlugin
-import org.starficz.starui.compose.runtime.UIState
-import org.starficz.starui.core.Anchor
-import com.fs.starfarer.api.ui.LabelAPI
-import org.starficz.starui.core.Font
-import org.starficz.starui.core.applyAnchor
-import org.starficz.starui.core.bottom
-import org.starficz.starui.core.left
-import org.starficz.starui.core.right
-import org.starficz.starui.core.top
-import org.starficz.starui.core.width
-import org.starficz.starui.linMap
-import org.starficz.starui.playSound
+import org.starficz.starui.Alignment
+import org.starficz.starui.Anchor
+import org.starficz.starui.components.*
+import org.starficz.starui.modifier.*
+import org.starficz.starui.Size
+import org.starficz.starui.TextAlign
+import org.starficz.starui.UIState
+import org.starficz.starui.vanilla.*
 import java.awt.Color
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -62,27 +47,26 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
     val energyColor = Color(125, 194, 255)
     val fragColor = Color(255, 255, 131)
 
-    // Exact size: FilterPanelCreator adds up the panels' heights right after creating them, before the first layout.
-    return Row(Size.exact(targetWidth, targetHeight), verticalAlignment = Alignment.CenterVertically, spacing = 1f) {
-        with(filterData) {
-            refreshPickerOn(pickerPanel, kineticDamage, heDamage, energyDamage, fragDamage, lowerRange, upperRange)
-        }
+    val refresh = with(filterData) {
+        Modifier.refreshPickerOn(pickerPanel, kineticDamage, heDamage, energyDamage, fragDamage, lowerRange, upperRange)
+    }
 
+    // Exact size: FilterPanelCreator adds up the panels' heights right after creating them, before the first layout.
+    return Row(Size.exact(targetWidth, targetHeight), refresh, verticalAlignment = Alignment.CenterVertically, spacing = 1f) {
         val damageTypeGroup = ButtonGroup()
 
         fun createDamageTypeButton(iconPath: String, typeColor: Color, filterState: UIState<Boolean>, tooltipText: String) {
-            // Reads filterState, so this little panel re-runs when the type is toggled: the checkbox and icon are
-            // the same native objects each time (StarUI reuses them), only their look is updated.
-            CustomPanel(Size.exact(targetHeight, targetHeight)) {
+            // Reads filterState, so this box re-runs when the type is toggled: the checkbox and the icon stacked on
+            // it are the same native objects each time (StarUI reuses them), only their look is updated.
+            Box(Size.exact(targetHeight, targetHeight)) {
                 val enabled = filterState.value
                 val btn = AreaCheckbox(
                     "", filterState, Size.exact(targetHeight, targetHeight),
-                    Modifier.anchor(Anchor.inside.center.ofParent())
-                        .tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) { addPara(tooltipText, 0f) },
+                    Modifier.tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) { addPara(tooltipText, 0f) },
                     baseColor = typeColor.darker(), darkColor = typeColor.darker().darker(), brightColor = typeColor,
                     buttonGroup = damageTypeGroup
                 )
-                val img = Image(iconPath, Size.exact(targetHeight, targetHeight), Modifier.anchor(Anchor.inside.center.ofParent()))
+                val img = Image(iconPath, Size.exact(targetHeight, targetHeight))
 
                 btn.glowBrightness = if (enabled) 0.5f else 1f
                 if (enabled) {
@@ -102,174 +86,165 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
         createDamageTypeButton(energyIconPath, energyColor, filterData.energyDamage, "Show energy damage.")
         createDamageTypeButton(fragmentationIconPath, fragColor, filterData.fragDamage, "Show fragmentation damage.")
 
-        Text("RANGE", modifier = Modifier.padding(horizontal = 6f, vertical = 0f), font = Font.VICTOR_14, color = Misc.getTextColor())
+        Text("RANGE",
+            modifier = Modifier.padding(horizontal = 6f, vertical = 0f),
+            font = Font.VICTOR_14,
+            color = Misc.getTextColor(),
+            textAlign = TextAlign.Center
+        )
 
-        val sliderTooltip = Modifier.tooltip(370f, TooltipMakerAPI.TooltipLocation.ABOVE) {
+        RangeSlider(filterData, minRange, maxRange, rangeIncrement, rangeTickSnapping)
+    }
+}
+
+/**
+ * Two handles on one bar of ticks [rangeIncrement] apart; a click or drag moves the handle nearer the cursor. Drawn
+ * by hand: StarUI's Slider is vanilla's single-value slider.
+ */
+private fun UIPanelAPI.RangeSlider(filterData: FilterData, minRange: Int, maxRange: Int, rangeIncrement: Int, rangeTickSnapping: Boolean) {
+    var lowerNodeHovered = false
+    var upperNodeHovered = false
+
+    val nodeColor = Misc.getHighlightColor()
+    val lineBrightColor = nodeColor.darker()
+    val lineDarkColor = lineBrightColor.darker().darker()
+
+    val minBarRightPad = 18f
+    val minBarLeftPad = 12f
+    val barYPad = 2f
+    val barThickness = 2f
+    val tickThickness = 2f
+    val tickHeight = 5f
+    val nodeSize = 4f
+
+    val numOfTicks = ((maxRange - minRange) / rangeIncrement)
+    val maxSliderRange = minRange + numOfTicks * rangeIncrement
+    val sliderTickRanges = (0..numOfTicks).map { it * rangeIncrement + minRange }
+
+    // Whole pixels, so every tick is drawn the same width.
+    fun tickXOffsets(width: Float): List<Int> {
+        val spacing = (width - minBarLeftPad - minBarRightPad - tickThickness) / numOfTicks.toFloat()
+        return (0..numOfTicks).map { (it * spacing).toInt() }
+    }
+
+    fun mapRangeToXOffset(range: Float, offsets: List<Int>): Float {
+        val rangeXOffset: Float = range.linMap(minRange, maxSliderRange, offsets.first(), offsets.last())
+        val nodeSnappedXOffset = offsets.minByOrNull { abs(rangeXOffset - it) }!!.toFloat()
+        return if (rangeTickSnapping) nodeSnappedXOffset else rangeXOffset
+    }
+
+    fun mapXPosToRange(xPos: Float, nodeStartCenterXPos: Float, offsets: List<Int>): Float {
+        val range: Float = xPos.linMap(offsets.first() + nodeStartCenterXPos,
+            offsets.last() + nodeStartCenterXPos, minRange, maxSliderRange)
+        val snappedRange = sliderTickRanges.minByOrNull { abs(range - it) }!!
+        return if (rangeTickSnapping) snappedRange.toFloat() else range
+    }
+
+    // The panel, for the mouse handlers (they get the event, not the panel).
+    lateinit var slider: CustomPanelAPI
+
+    /** Whether the lower handle is the one nearer [event] (a tie goes to the lower one). */
+    fun lowerIsNearer(event: InputEventAPI, offsets: List<Int>): Boolean {
+        val nodeStartCenterXPos = slider.left + minBarLeftPad + tickThickness / 2
+        val lowerNodeXPos = mapRangeToXOffset(filterData.lowerRange.value, offsets) + nodeStartCenterXPos
+        val upperNodeXPos = mapRangeToXOffset(filterData.upperRange.value, offsets) + nodeStartCenterXPos
+        return abs(lowerNodeXPos - event.x) <= abs(upperNodeXPos - event.x)
+    }
+
+    // Four tick labels (each with its tick's index), placed once the slider's width is known (onLayout).
+    val labelledTicks = listOf(0, ((sliderTickRanges.size - 1) / 3f).roundToInt(),
+        ((sliderTickRanges.size - 1) * 2 / 3f).roundToInt(), sliderTickRanges.size - 1)
+    val tickLabels = mutableListOf<Pair<LabelAPI, Int>>()
+
+    val sliderModifier = Modifier
+        .tooltip(370f, TooltipMakerAPI.TooltipLocation.ABOVE) {
             addPara("Filters based on non-modified base range.", 0f)
             addPara("Click anywhere within the slider to move the nearest point.", 0f)
             addPara("Setting the maximum to $maxRange makes the upper limit infinite.",
                 0f, Misc.getTextColor(), Misc.getHighlightColor(), "$maxRange")
         }
+        // The black backing reaches 4 px below the panel (onRenderBelow), so clicks there count too.
+        .hitBoxPadding(bottom = 4f)
+        // After every layout pass: the tick positions depend on the slider's width.
+        .onLayout {
+            val offsets = tickXOffsets(width)
+            val startX = minBarLeftPad + tickThickness / 2 - 1
+            for ((label, tick) in tickLabels) {
+                label.applyAnchor(Anchor.inside.topLeft.ofParent(startX + offsets[tick] - label.width / 2, 0f))
+            }
+        }
+        .onRenderBelow { alphaMult ->
+            glColor(Color.BLACK, alphaMult)
+            GL11.glRectf(left, bottom - 4, right, top)
+            GL11.glEnable(GL11.GL_TEXTURE_2D)
+        }
+        .onRender { alphaMult ->
+            val offsets = tickXOffsets(width)
+            val bottomOfBar = bottom + barYPad
+            val topOfBar = bottomOfBar + barThickness
+            val leftOfBar = left + minBarLeftPad
+            val rightOfBar = leftOfBar + offsets.last() + tickThickness
 
-        CustomPanel(Size.fillMaxSize(), sliderTooltip) {
-            val sliderPanel = this
-            var lowerNodeHovered = false
-            var upperNodeHovered = false
+            glColor(lineDarkColor, alphaMult, false)
+            GL11.glRectf(leftOfBar, bottomOfBar, rightOfBar, topOfBar)
 
-            val nodeColor = Misc.getHighlightColor()
-            val lineBrightColor = nodeColor.darker()
-            val lineDarkColor = lineBrightColor.darker().darker()
-
-            val pixelPerfect = true
-            val minBarRightPad = 18f
-            val minBarLeftPad = 12f
-            val barYPad = 2f
-            val barThickness = 2f
-            val tickThickness = 2f
-            val tickHeight = 5f
-            val nodeSize = 4f
-
-            val numOfTicks = ((maxRange - minRange) / rangeIncrement)
-            val maxSliderRange = minRange + numOfTicks * rangeIncrement
-            val sliderTickRanges = (0..numOfTicks).map { it * rangeIncrement + minRange }
-
-            fun tickSpacing() = (sliderPanel.width - minBarLeftPad - minBarRightPad - tickThickness) / numOfTicks.toFloat()
-
-            fun tickXOffsets() = if (pixelPerfect) (0..numOfTicks).map { (it * tickSpacing()).toInt() }
-                                 else (0..numOfTicks).map { (it * tickSpacing()).roundToInt() }
-
-            fun startingTickXPos() = minBarLeftPad + tickThickness / 2 - 1
-
-            fun mapRangeToXOffset(range: Float): Float {
-                val offsets = tickXOffsets()
-                val rangeXOffset: Float = range.linMap(minRange, maxSliderRange, offsets.first(), offsets.last())
-                val nodeSnappedXOffset = offsets.minByOrNull { abs(rangeXOffset - it) }!!.toFloat()
-                return if (rangeTickSnapping) nodeSnappedXOffset else rangeXOffset
+            for (tickXOffset in offsets) {
+                GL11.glRectf(leftOfBar + tickXOffset.toFloat(), topOfBar,
+                    leftOfBar + tickXOffset + tickThickness, topOfBar + tickHeight)
             }
 
-            fun mapXPosToRange(xPos: Float): Float {
-                val offsets = tickXOffsets()
-                val nodeStartCenterXPos = sliderPanel.left + minBarLeftPad + tickThickness / 2
-                val range: Float = xPos.linMap(offsets.first() + nodeStartCenterXPos,
-                    offsets.last() + nodeStartCenterXPos, minRange, maxSliderRange)
-                val snappedRange = sliderTickRanges.minByOrNull { abs(range - it) }!!
-                return if (rangeTickSnapping) snappedRange.toFloat() else range
+            val nodeStartXPos = left + minBarLeftPad + tickThickness / 2 - nodeSize / 2
+            val lowerNodeXPos = mapRangeToXOffset(filterData.lowerRange.value, offsets) + nodeStartXPos
+            val upperNodeXPos = mapRangeToXOffset(filterData.upperRange.value, offsets) + nodeStartXPos
+
+            glColor(lineBrightColor, alphaMult, false)
+            GL11.glRectf(lowerNodeXPos + nodeSize, bottomOfBar, upperNodeXPos, topOfBar)
+
+            glColor(if (lowerNodeHovered) nodeColor.brighter() else nodeColor, alphaMult, false)
+            GL11.glRectf(lowerNodeXPos, bottomOfBar + barThickness / 2 - nodeSize / 2,
+                lowerNodeXPos + nodeSize, bottomOfBar + barThickness / 2 + nodeSize / 2)
+
+            glColor(if (upperNodeHovered) nodeColor.brighter() else nodeColor, alphaMult, false)
+            GL11.glRectf(upperNodeXPos, bottomOfBar + barThickness / 2 - nodeSize / 2,
+                upperNodeXPos + nodeSize, bottomOfBar + barThickness / 2 + nodeSize / 2)
+
+            GL11.glEnable(GL11.GL_TEXTURE_2D)
+        }
+        .onClick { playSound("ui_button_pressed", 1f, 1f) }
+        .onHover { event ->
+            val lower = lowerIsNearer(event, tickXOffsets(slider.width))
+            // the click sound of moving from one handle to the other
+            if (lower && upperNodeHovered || !lower && lowerNodeHovered) playSound("ui_button_mouseover", 1f, 0.8f)
+            lowerNodeHovered = lower
+            upperNodeHovered = !lower
+        }
+        .onHoverExit {
+            lowerNodeHovered = false
+            upperNodeHovered = false
+        }
+        .onMouseHeld { event ->
+            val offsets = tickXOffsets(slider.width)
+            val nodeStartCenterXPos = slider.left + minBarLeftPad + tickThickness / 2
+            var newLower = filterData.lowerRange.value
+            var newUpper = filterData.upperRange.value
+
+            if (lowerIsNearer(event, offsets)) newLower = mapXPosToRange(event.x.toFloat(), nodeStartCenterXPos, offsets)
+            else newUpper = mapXPosToRange(event.x.toFloat(), nodeStartCenterXPos, offsets)
+
+            if (abs(filterData.upperRange.value - newUpper) > rangeIncrement / 4 ||
+                abs(filterData.lowerRange.value - newLower) > rangeIncrement / 4) {
+                if (rangeTickSnapping) playSound("ui_number_scrolling", 1f, 0.8f)
+                filterData.lowerRange.value = newLower
+                filterData.upperRange.value = newUpper
             }
+        }
 
-            // Tick labels are placed once the slider's width is known (onLayout below).
-            fun createLabel(value: Int): LabelAPI {
-                val str = if (value < 10000) value.toString() else "${value / 1000}K"
-                return Text(str, font = Font.VICTOR_14, color = Misc.getTextColor())
-            }
-
-            val minLabel = createLabel(minRange)
-
-            val oneThirdIndex = ((sliderTickRanges.size - 1) / 3f).roundToInt()
-            val oneThirdLabel = createLabel(sliderTickRanges[oneThirdIndex])
-
-            val twoThirdIndex = ((sliderTickRanges.size - 1) * 2 / 3f).roundToInt()
-            val twoThirdLabel = createLabel(sliderTickRanges[twoThirdIndex])
-
-            val maxLabel = createLabel(sliderTickRanges.last())
-
-            with(sliderPanel.plugin as StarUIPanelPlugin) {
-                setMouseCapturePad(0f, 0f, 0f, 4f)
-
-                // After every layout pass: the tick positions depend on the slider's width.
-                onLayout {
-                    val offsets = tickXOffsets()
-                    val startX = startingTickXPos()
-
-                    minLabel.applyAnchor(Anchor.inside.topLeft.ofParent(startX + offsets[0] - minLabel.width / 2, 0f))
-                    oneThirdLabel.applyAnchor(Anchor.inside.topLeft.ofParent(startX + offsets[oneThirdIndex] - oneThirdLabel.width / 2, 0f))
-                    twoThirdLabel.applyAnchor(Anchor.inside.topLeft.ofParent(startX + offsets[twoThirdIndex] - twoThirdLabel.width / 2, 0f))
-                    maxLabel.applyAnchor(Anchor.inside.topLeft.ofParent(startX + offsets.last() - maxLabel.width / 2, 0f))
-                }
-
-                renderBelow { alphaMult ->
-                    glColor(Color.BLACK, alphaMult)
-                    GL11.glRectf(left, bottom - 4, right, top)
-                    GL11.glEnable(GL11.GL_TEXTURE_2D)
-                }
-
-                render { alphaMult ->
-                    val offsets = tickXOffsets()
-                    val bottomOfBar = bottom + barYPad
-                    val topOfBar = bottomOfBar + barThickness
-                    val leftOfBar = left + minBarLeftPad
-                    val rightOfBar = leftOfBar + offsets.last() + tickThickness
-
-                    glColor(lineDarkColor, alphaMult, false)
-                    GL11.glRectf(leftOfBar, bottomOfBar, rightOfBar, topOfBar)
-
-                    for (tickXOffset in offsets) {
-                        GL11.glRectf(leftOfBar + tickXOffset.toFloat(), topOfBar,
-                            leftOfBar + tickXOffset + tickThickness, topOfBar + tickHeight)
-                    }
-
-                    val nodeStartXPos = left + minBarLeftPad + tickThickness / 2 - nodeSize / 2
-                    val lowerNodeXPos = mapRangeToXOffset(filterData.lowerRange.value) + nodeStartXPos
-                    val upperNodeXPos = mapRangeToXOffset(filterData.upperRange.value) + nodeStartXPos
-
-                    glColor(lineBrightColor, alphaMult, false)
-                    GL11.glRectf(lowerNodeXPos + nodeSize, bottomOfBar, upperNodeXPos, topOfBar)
-
-                    glColor(if (lowerNodeHovered) nodeColor.brighter() else nodeColor, alphaMult, false)
-                    GL11.glRectf(lowerNodeXPos, bottomOfBar + barThickness / 2 - nodeSize / 2,
-                        lowerNodeXPos + nodeSize, bottomOfBar + barThickness / 2 + nodeSize / 2)
-
-                    glColor(if (upperNodeHovered) nodeColor.brighter() else nodeColor, alphaMult, false)
-                    GL11.glRectf(upperNodeXPos, bottomOfBar + barThickness / 2 - nodeSize / 2,
-                        upperNodeXPos + nodeSize, bottomOfBar + barThickness / 2 + nodeSize / 2)
-
-                    GL11.glEnable(GL11.GL_TEXTURE_2D)
-                }
-
-                onClick { playSound("ui_button_pressed", 1f, 1f) }
-
-                onHover { event ->
-                    val nodeStartCenterXPos = left + minBarLeftPad + tickThickness / 2
-                    val lowerNodeXPos = mapRangeToXOffset(filterData.lowerRange.value) + nodeStartCenterXPos
-                    val upperNodeXPos = mapRangeToXOffset(filterData.upperRange.value) + nodeStartCenterXPos
-
-                    if (abs(lowerNodeXPos - event.x.toFloat()) <= abs(upperNodeXPos - event.x.toFloat())) {
-                        if (upperNodeHovered) playSound("ui_button_mouseover", 1f, 0.8f)
-                        lowerNodeHovered = true
-                        upperNodeHovered = false
-                    } else {
-                        if (lowerNodeHovered) playSound("ui_button_mouseover", 1f, 0.8f)
-                        lowerNodeHovered = false
-                        upperNodeHovered = true
-                    }
-                }
-
-                onHoverExit {
-                    lowerNodeHovered = false
-                    upperNodeHovered = false
-                }
-
-                onMouseHeld { event ->
-                    val nodeStartCenterXPos = left + minBarLeftPad + tickThickness / 2
-                    val lowerNodeXPos = mapRangeToXOffset(filterData.lowerRange.value) + nodeStartCenterXPos
-                    val upperNodeXPos = mapRangeToXOffset(filterData.upperRange.value) + nodeStartCenterXPos
-
-                    var newLower = filterData.lowerRange.value
-                    var newUpper = filterData.upperRange.value
-
-                    if (abs(lowerNodeXPos - event.x.toFloat()) <= abs(upperNodeXPos - event.x.toFloat())) {
-                        newLower = mapXPosToRange(event.x.toFloat())
-                    } else {
-                        newUpper = mapXPosToRange(event.x.toFloat())
-                    }
-
-                    if (abs(filterData.upperRange.value - newUpper) > rangeIncrement / 4 ||
-                        abs(filterData.lowerRange.value - newLower) > rangeIncrement / 4) {
-                        if (rangeTickSnapping) playSound("ui_number_scrolling", 1f, 0.8f)
-                        filterData.lowerRange.value = newLower
-                        filterData.upperRange.value = newUpper
-                    }
-                }
-            }
+    slider = CustomPanel(Size.fillMaxSize(), sliderModifier) {
+        tickLabels.clear()
+        for (tick in labelledTicks) {
+            val value = sliderTickRanges[tick]
+            val text = if (value < 10000) value.toString() else "${value / 1000}K"
+            tickLabels += Text(text, font = Font.VICTOR_14, color = Misc.getTextColor()) to tick
         }
     }
 }
