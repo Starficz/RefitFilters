@@ -1,5 +1,6 @@
 package org.starficz.refitfilters
 
+import com.fs.starfarer.api.loading.FighterWingSpecAPI
 import com.fs.starfarer.api.loading.WeaponSpecAPI
 import com.fs.starfarer.api.plugins.AutofitPlugin
 
@@ -26,42 +27,65 @@ object WeaponStats {
         (lower > scale.min && value < lower) || (upper < scale.max && value > upper)
 
     private fun value(key: SortKey, spec: WeaponSpecAPI): Float = when (key) {
-        SortKey.NAME -> 0f
         SortKey.OP -> spec.getOrdnancePointCost(null)   // base cost; skills change every weapon of a size alike
         SortKey.RANGE -> spec.maxRange
         SortKey.DMG -> damagePerShot(spec)
         SortKey.DPS -> dps(spec)
         SortKey.EFF -> efficiency(spec)
+        else -> 0f
+    }
+
+    /** Sorts the weapon picker's list by [key]; see [PickerSort.sort]. */
+    fun sort(items: MutableList<Any?>, key: SortKey, descending: Boolean) = PickerSort.sort(items, key, descending) { item ->
+        (item as? AutofitPlugin.AvailableWeapon)?.let { weapon ->
+            PickerSort.Entry(weapon.price, weapon.spec.weaponName, value(key, weapon.spec))
+        }
+    }
+}
+
+/** The wing stats the fighter picker's sort row and stat slider use. */
+object WingStats {
+    fun refitTime(spec: FighterWingSpecAPI): Float = spec.refitTime
+    fun size(spec: FighterWingSpecAPI): Float = spec.numFighters.toFloat()
+
+    private fun value(key: SortKey, spec: FighterWingSpecAPI): Float = when (key) {
+        SortKey.OP -> spec.getOpCost(null)   // base cost, as for weapons
+        SortKey.RANGE -> spec.range
+        SortKey.REFIT -> refitTime(spec)
+        SortKey.SIZE -> size(spec)
+        else -> 0f
+    }
+
+    /** Sorts the fighter picker's list by [key]; see [PickerSort.sort]. */
+    fun sort(items: MutableList<Any?>, key: SortKey, descending: Boolean) = PickerSort.sort(items, key, descending) { item ->
+        (item as? AutofitPlugin.AvailableFighter)?.let { wing ->
+            PickerSort.Entry(wing.price, wing.wingSpec.wingName, value(key, wing.wingSpec))
+        }
+    }
+}
+
+object PickerSort {
+    /** What the sort needs of one picker item: its price (vanilla groups free ones first), name and sort value. */
+    class Entry(price: Float, val name: String, val value: Float) {
+        val group: Int = if (price == 0f) 0 else 1
     }
 
     /**
-     * Sorts the picker's list by [key]. Vanilla's own order is OP, highest first, so that one is left as vanilla made
-     * it. Every other order keeps vanilla's first grouping, weapons from your cargo (free) before ones you would buy,
-     * and is stable, so equal values keep vanilla's order.
+     * Sorts a picker's list by [key]. Vanilla's own order is OP, highest first, so that one is left as vanilla made
+     * it. Every other order keeps vanilla's first grouping, items from your cargo (free) before ones you would buy,
+     * and is stable, so equal values keep vanilla's order. Items [entry] does not know go last, in their order.
      */
-    fun sort(items: MutableList<Any?>, key: SortKey, descending: Boolean) {
+    fun sort(items: MutableList<Any?>, key: SortKey, descending: Boolean, entry: (Any?) -> Entry?) {
         if (key == SortKey.OP && descending) return
-        val order = Comparator<Entry> { a, b ->
+        val order = Comparator<Pair<Any?, Entry?>> { (_, a), (_, b) ->
+            if (a == null || b == null) return@Comparator (if (a == null) 1 else 0) - (if (b == null) 1 else 0)
             if (a.group != b.group) return@Comparator a.group - b.group
-            val specA = a.spec ?: return@Comparator 0
-            val specB = b.spec ?: return@Comparator 0
-            val byKey = if (key == SortKey.NAME) String.CASE_INSENSITIVE_ORDER.compare(specA.weaponName, specB.weaponName)
-                        else value(key, specA).compareTo(value(key, specB))
+            val byKey = if (key == SortKey.NAME) String.CASE_INSENSITIVE_ORDER.compare(a.name, b.name)
+                        else a.value.compareTo(b.value)
             if (descending) -byKey else byKey
         }
-        val sorted = items.map { Entry(it) }.sortedWith(order)
+        val sorted = items.map { it to entry(it) }.sortedWith(order)
         items.clear()
-        items.addAll(sorted.map { it.item })
-    }
-
-    private class Entry(val item: Any?) {
-        private val weapon = item as? AutofitPlugin.AvailableWeapon
-        val spec: WeaponSpecAPI? = weapon?.spec
-        /** Vanilla's first grouping: weapons from your cargo (free) first; anything else after the weapons. */
-        val group: Int = when {
-            weapon == null -> 2
-            weapon.price == 0f -> 0
-            else -> 1
-        }
+        items.addAll(sorted.map { it.first })
     }
 }

@@ -1,5 +1,6 @@
 package org.starficz.refitfilters.filterpanels
 
+import com.fs.starfarer.api.Global
 import com.fs.starfarer.api.input.InputEventAPI
 import com.fs.starfarer.api.ui.CustomPanelAPI
 import com.fs.starfarer.api.ui.LabelAPI
@@ -26,10 +27,10 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
     filterData: FilterData
 ): CustomPanelAPI {
 
-    val minRange = if(filterData is WeaponFilterData) RFSettings.weaponMinRange else RFSettings.fighterMinRange
     val maxRange = if(filterData is WeaponFilterData) RFSettings.weaponMaxRange else RFSettings.fighterMaxRange
     val rangeIncrement = if(filterData is WeaponFilterData) RFSettings.weaponRangeIncrement else RFSettings.fighterRangeIncrement
-    val rangeTickSnapping = if(filterData is WeaponFilterData) RFSettings.weaponRangeTickSnapping else RFSettings.fighterRangeTickSnapping
+    // snapping is one setting for the whole slider; the tick distance is a setting for range only
+    val tickSnapping = if(filterData is WeaponFilterData) RFSettings.weaponRangeTickSnapping else RFSettings.fighterRangeTickSnapping
 
     val kineticIconPath = "graphics/ui/icons/damagetype_kinetic.png"
     val highExplosiveIconPath = "graphics/ui/icons/damagetype_high_explosive.png"
@@ -43,6 +44,7 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
 
     val watched = with(filterData) { mutableListOf<UIState<*>>(kineticDamage, heDamage, energyDamage, fragDamage, lowerRange, upperRange) }
     if (filterData is WeaponFilterData) with(filterData) { watched += listOf(dpsLower, dpsUpper, dmgLower, dmgUpper, effLower, effUpper) }
+    if (filterData is FighterFilterData) with(filterData) { watched += listOf(refitLower, refitUpper, sizeLower, sizeUpper) }
     val refresh = Modifier.refreshPickerOn(pickerPanel, *watched.toTypedArray())
 
     // Exact size: FilterPanelCreator adds up the panels' heights right after creating them, before the first layout.
@@ -80,45 +82,47 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
         createDamageTypeButton(energyIconPath, energyColor, filterData.energyDamage, "Show energy damage.")
         createDamageTypeButton(fragmentationIconPath, fragColor, filterData.fragDamage, "Show fragmentation damage.")
 
-        val range = StatSlider(SliderStat.RANGE, filterData.lowerRange, filterData.upperRange, minRange.toFloat(), maxRange.toFloat(),
-            rangeIncrement.toFloat(), rangeTickSnapping, { v -> if (v < 10000) v.toInt().toString() else "${v.toInt() / 1000}K" },
+        val range = StatSlider(SliderStat.RANGE, "range", filterData.lowerRange, filterData.upperRange, 0f, maxRange.toFloat(),
+            rangeIncrement.toFloat(), tickSnapping, { v -> if (v < 10000) v.toInt().toString() else "${v.toInt() / 1000}K" },
             "Filters based on non-modified base range.")
 
-        if (filterData is WeaponFilterData) {
-            // the selector picks what the slider filters; each stat keeps its own limits
-            fun scaled(stat: SliderStat, scale: StatScale, lower: UIState<Float>, upper: UIState<Float>, format: (Float) -> String, tooltip: String) =
-                StatSlider(stat, lower, upper, scale.min, scale.max, scale.step, true, format, tooltip, labelEvery = 5)
-            val stats = listOf(
+        // the selector picks what the slider filters; each stat keeps its own limits
+        fun scaled(stat: SliderStat, name: String, scale: StatScale, lower: UIState<Float>, upper: UIState<Float>,
+                   format: (Float) -> String, tooltip: String, labelEvery: Int = 5) =
+            StatSlider(stat, name, lower, upper, scale.min, scale.max, scale.step, tickSnapping, format, tooltip, labelEvery)
+        val whole = { v: Float -> v.toInt().toString() }
+        val stats = when (filterData) {
+            is WeaponFilterData -> listOf(
                 range,
-                scaled(SliderStat.DPS, StatScale.DPS, filterData.dpsLower, filterData.dpsUpper, { v -> v.toInt().toString() },
+                scaled(SliderStat.DPS, "DPS", StatScale.DPS, filterData.dpsLower, filterData.dpsUpper, whole,
                     "Filters based on sustained damage per second."),
-                scaled(SliderStat.DMG, StatScale.DMG, filterData.dmgLower, filterData.dmgUpper, { v -> v.toInt().toString() },
+                scaled(SliderStat.DMG, "damage per shot", StatScale.DMG, filterData.dmgLower, filterData.dmgUpper, whole,
                     "Filters based on damage per shot."),
-                scaled(SliderStat.EFF, StatScale.EFF, filterData.effLower, filterData.effUpper, { v -> String.format("%.1f", v) },
+                scaled(SliderStat.EFF, "flux efficiency", StatScale.EFF, filterData.effLower, filterData.effUpper, { v -> String.format("%.1f", v) },
                     "Filters based on flux efficiency: damage per point of flux."),
             )
-            Row(Size.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, spacing = 1f) {
-                val shown = stats.first { it.stat == filterData.sliderStat.value }
-                StatSelector(filterData, stats, targetHeight)
-                RangeSlider(shown)
-            }
-        } else {
-            Text("RANGE",
-                modifier = Modifier.padding(horizontal = 6f, vertical = 0f),
-                font = Font.VICTOR_14,
-                color = Misc.getTextColor(),
-                textAlign = TextAlign.Center
+            is FighterFilterData -> listOf(
+                range,
+                scaled(SliderStat.REFIT, "refit time", StatScale.REFIT, filterData.refitLower, filterData.refitUpper, whole,
+                    "Filters based on refit time: the seconds a lost fighter takes to replace."),
+                scaled(SliderStat.SIZE, "wing size", StatScale.SIZE, filterData.sizeLower, filterData.sizeUpper, whole,
+                    "Filters based on wing size: fighters per wing.", labelEvery = 1),
             )
-            RangeSlider(range)
+            else -> listOf(range)
+        }
+        Row(Size.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, spacing = 1f) {
+            val shown = stats.firstOrNull { it.stat == filterData.sliderStat.value } ?: range
+            StatSelector(filterData, stats, targetHeight)
+            RangeSlider(shown)
         }
     }
 }
 
 /** One stat the slider can show: its own range states, bounds, tick step and label format. */
 class StatSlider(
-    val stat: SliderStat, val lower: UIState<Float>, val upper: UIState<Float>,
+    val stat: SliderStat, /** For the selector's tooltip. */ val name: String, val lower: UIState<Float>, val upper: UIState<Float>,
     val min: Float, val max: Float, val step: Float, val snapping: Boolean, val format: (Float) -> String, val tooltip: String,
-    /** Label every this many ticks; null: the ends and the thirds (range, whose ticks come from the settings). */
+    /** Label every this many ticks when that ends on the last one (see RangeSlider); null: the ends and the thirds. */
     val labelEvery: Int? = null
 ) {
     val filtered: Boolean get() = lower.value > min || upper.value < max
@@ -129,11 +133,12 @@ class StatSlider(
  * small arrows, the pips in their own band below. Click the right half for the next stat, the left half or right-click
  * for the one before. Pips: bright for the stat shown, yellow for every stat that filters.
  */
-private fun UIPanelAPI.StatSelector(filterData: WeaponFilterData, stats: List<StatSlider>, height: Float) {
+private fun UIPanelAPI.StatSelector(filterData: FilterData, stats: List<StatSlider>, height: Float) {
     val width = 60f
     fun step(by: Int) {
-        val all = SliderStat.values()
-        filterData.sliderStat.value = all[(filterData.sliderStat.value.ordinal + by + all.size) % all.size]
+        val all = stats.map { it.stat }
+        val at = all.indexOf(filterData.sliderStat.value).coerceAtLeast(0)
+        filterData.sliderStat.value = all[(at + by + all.size) % all.size]
         playSound("ui_button_pressed", 1f, 1f)
     }
     /** A 3 x 6 px arrowhead from whole-pixel columns (6, 4, 2 tall), so both sides come out the same. */
@@ -146,12 +151,11 @@ private fun UIPanelAPI.StatSelector(filterData: WeaponFilterData, stats: List<St
             GL11.glRectf(x, cy + 1f - half, x + 1f, cy + 1f + half)
         }
     }
-    // where the cursor is over the selector, for the side highlight
-    var hoverX = 0f
     lateinit var slider: CustomPanelAPI
     val look = Modifier
         .tooltip(330f, TooltipMakerAPI.TooltipLocation.ABOVE) {
-            addPara("Choose what the slider filters: range, DPS, damage per shot or flux efficiency.", 0f)
+            val names = stats.map { it.name }
+            addPara("Choose what the slider filters: ${names.dropLast(1).joinToString(", ")} or ${names.last()}.", 0f)
             addPara("Click the right side for the next one, the left side or right-click for the one before.", 0f)
             addPara("Every stat keeps its own limits, and all of them filter at once. A yellow mark below the name means that stat is filtering.",
                 0f, Misc.getTextColor(), Misc.getHighlightColor(), "yellow mark")
@@ -161,8 +165,10 @@ private fun UIPanelAPI.StatSelector(filterData: WeaponFilterData, stats: List<St
             glColor(Misc.getDarkPlayerColor().darker().darker(), alphaMult, false)
             GL11.glRectf(left, bottom, right, top)
             if (isHovering) {
-                // the half a click would use lights up, fading out towards the other side: left goes back, right forward
-                val leftSide = hoverX < left + this.width / 2f
+                // the half a click would use lights up, fading out towards the other side: left goes back, right forward.
+                // The cursor is read now, not kept from hover events: a click rebuilds this panel, and a kept position
+                // would start over (one frame of the wrong side after every click on the right).
+                val leftSide = Global.getSettings().mouseX < left + this.width / 2f
                 val c = Misc.getDarkPlayerColor()
                 val (r, g, b) = Triple(c.red / 255f, c.green / 255f, c.blue / 255f)
                 val litX = if (leftSide) left else right
@@ -176,7 +182,6 @@ private fun UIPanelAPI.StatSelector(filterData: WeaponFilterData, stats: List<St
             }
             GL11.glEnable(GL11.GL_TEXTURE_2D)
         }
-        .onHover { event -> hoverX = event.x.toFloat() }
         .border(Misc.getDarkPlayerColor())
         .onRender { alphaMult ->
             GL11.glDisable(GL11.GL_TEXTURE_2D)
@@ -273,7 +278,10 @@ private fun UIPanelAPI.RangeSlider(stat: StatSlider) {
     }
 
     // Four tick labels (each with its tick's index), placed once the slider's width is known (onLayout).
-    val labelledTicks = stat.labelEvery?.let { every -> (0..numOfTicks step every).toList() }
+    // Every labelEvery ticks only when that ends on the last tick and stays readable (the tops are settings, so any
+    // count of ticks can come up); else the ends and the thirds.
+    val labelledTicks = stat.labelEvery?.takeIf { numOfTicks % it == 0 && numOfTicks / it <= 6 }
+        ?.let { every -> (0..numOfTicks step every).toList() }
         ?: listOf(0, ((sliderTickRanges.size - 1) / 3f).roundToInt(), ((sliderTickRanges.size - 1) * 2 / 3f).roundToInt(), sliderTickRanges.size - 1)
     val tickLabels = mutableListOf<Pair<LabelAPI, Int>>()
 

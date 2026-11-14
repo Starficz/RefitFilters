@@ -10,8 +10,6 @@ class ModPlugin : BaseModPlugin() {
         // The weapon and fighter pickers are handled by WeaponPickerPatch / FighterPickerPatch (PatchLib hooks on
         // their builds).
 
-        // Cargo screen filters are work in progress (CargoInjections.kt); not registered until they do something.
-        // StarUIManager.registerDynamicInjection(PlayerCargoInjection())
-        // StarUIManager.registerDynamicInjection(EntityCargoInjection())
+        // Cargo screen filters are work in progress (CargoInjections.kt): not hooked up until they do something.
     }
 }

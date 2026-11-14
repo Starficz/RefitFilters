@@ -8,7 +8,7 @@ import org.lazywizard.lazylib.opengl.ColorUtils.glColor
 import org.lwjgl.opengl.GL11
 import org.starficz.refitfilters.PickerPanelHelpers.refreshPickerOn
 import org.starficz.refitfilters.SortKey
-import org.starficz.refitfilters.WeaponFilterData
+import org.starficz.refitfilters.FilterData
 import org.starficz.starui.Alignment
 import org.starficz.starui.Axis
 import org.starficz.starui.components.*
@@ -47,7 +47,7 @@ private const val LABEL_LIFT = 4f
  * strip edge to edge: each gets its label (the active one also its arrow) plus an equal share of the space left, so
  * the arrow never squeezes a label.
  */
-fun UIPanelAPI.createSortPanel(targetWidth: Float, pickerPanel: UIPanelAPI, filterData: WeaponFilterData): CustomPanelAPI = Column(
+fun UIPanelAPI.createSortPanel(targetWidth: Float, pickerPanel: UIPanelAPI, filterData: FilterData): CustomPanelAPI = Column(
     Size.exact(targetWidth, SORT_PANEL_HEIGHT), Modifier.refreshPickerOn(pickerPanel, filterData.sortKey, filterData.sortDescending),
     spacing = 0f
 ) {
@@ -67,7 +67,7 @@ fun UIPanelAPI.createSortPanel(targetWidth: Float, pickerPanel: UIPanelAPI, filt
         // The keys tile the rest of the strip edge to edge. Each one's fill weight is its content width plus an
         // equal share of the space left, so the fill layout hands every key exactly its label (and the active one
         // its arrow) plus the same extra room.
-        val keys = SortKey.values()
+        val keys = filterData.sortKeys
         val contents = keys.map { key ->
             measureTextSize(key.label, Font.VICTOR_14).first + if (key == activeKey) ARROW_GAP + ARROW_WIDTH else 0f
         }
@@ -83,7 +83,7 @@ private const val SORT_BY = "SORT BY:"
 private const val SORT_BY_LEFT = 8f
 private const val SORT_BY_RIGHT = 4f
 
-private fun UIPanelAPI.SortItem(key: SortKey, active: Boolean, descending: Boolean, filterData: WeaponFilterData, weight: Float) {
+private fun UIPanelAPI.SortItem(key: SortKey, active: Boolean, descending: Boolean, filterData: FilterData, weight: Float) {
     val look = Modifier
         .tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) {
             addPara(key.tooltip, 0f)

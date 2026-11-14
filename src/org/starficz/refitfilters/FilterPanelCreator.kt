@@ -11,7 +11,9 @@ import org.starficz.refitfilters.filterpanels.*
 import org.starficz.refitfilters.ReflectionUtils.getMethodsMatching
 import org.starficz.starui.AreaCheckboxTheme
 import org.starficz.starui.components.Theme
-import org.starficz.starui.runtime.StarUIPanelPlugin
+import org.starficz.starui.inject
+import org.starficz.starui.injection
+import org.starficz.starui.Size
 import org.starficz.starui.StarUITheme
 import org.starficz.starui.vanilla.*
 
@@ -21,9 +23,11 @@ enum class PickerPanelType {
 }
 
 object FilterPanelCreator {
+    /** The search bar's injection key; it is always made, so it also says "this picker has its panels". */
+    private const val SEARCH_KEY = "refitfilters:search"
+
     val rowWidth = 377f
     val filterRowHeight = 25f
-    val itemRowHeight = 78f
 
     val weaponFilterData = WeaponFilterData()
     val fighterFilterData = FighterFilterData()
@@ -38,8 +42,8 @@ object FilterPanelCreator {
         ))
     }
 
-    /** Whether this picker gets the sort row: weapons only, when the setting allows it. Always last, on the list. */
-    private fun hasSortRow(pickerPanelType: PickerPanelType) = pickerPanelType == PickerPanelType.Weapons && RFSettings.sortRowEnabled
+    /** Whether the pickers get the sort row (the setting). Always last, on the list. */
+    private fun hasSortRow() = RFSettings.sortRowEnabled
 
     /** The panels and their order, as the settings ask: vanilla's own filter bar is `null` here. */
     private fun panelOrder(pickerPanelType: PickerPanelType): List<Pair<String?, Int>> = listOfNotNull(
@@ -57,7 +61,7 @@ object FilterPanelCreator {
     fun injectedExtraHeight(pickerPanelType: PickerPanelType): Float {
         val order = panelOrder(pickerPanelType)
         val ownPanels = order.count { it.first != null }
-        val sortRow = hasSortRow(pickerPanelType)
+        val sortRow = hasSortRow()
         if (ownPanels == 0 && !sortRow) return 0f
         val gaps = order.zipWithNext().count { (prev, _) -> prev.first != null }
         val sort = if (sortRow) SORT_ROW_GAP + SORT_PANEL_HEIGHT else 0f
@@ -76,8 +80,10 @@ object FilterPanelCreator {
             PickerPanelType.Fighters -> fighterFilterData
         }
 
+        // Once per inner panel: the positions below are not safe to apply twice (the align offsets read the current
+        // top). A rebuild that clears the panel drops our panels too, and the hook that called this runs again.
+        if (innerPanel.injection(SEARCH_KEY) != null) return
         val uiElements = innerPanel.children
-        if (uiElements.any { it is CustomPanelAPI && it.plugin is StarUIPanelPlugin }) return
 
         // vanilla's children, in the order its build adds them:
         // [currently mounted item, its caption,] filter bar, item list[, "No ... matching filter" label]
@@ -90,19 +96,28 @@ object FilterPanelCreator {
         val itemsList = uiElements.getOrNull(existingFiltersIndex+1) ?: return
         val noItems = uiElements.getOrNull(existingFiltersIndex+2)
 
-        lateinit var searchBarFilterPanel: CustomPanelAPI
-        var weaponTypesFilterPanel: CustomPanelAPI? = null
-        var damageTypeRangeSliderFilterPanel: CustomPanelAPI? = null
-        var sortPanel: CustomPanelAPI? = null
-        innerPanel.Theme(filterTheme()) {
-            searchBarFilterPanel = createSearchBarFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
-            if (RFSettings.WeaponTypePanelOrder != 0 && filterData is WeaponFilterData)
-                weaponTypesFilterPanel = createWeaponTypesFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
-            if (RFSettings.DamageTypeRangeSliderOrder != 0)
-                damageTypeRangeSliderFilterPanel = createDamageTypeRangeSliderFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
-            if (hasSortRow(pickerPanelType) && filterData is WeaponFilterData)
-                sortPanel = createSortPanel(rowWidth, pickerPanel, filterData)
+        // Each panel is its own injection (a container of the panel's exact size, so it can be positioned at once),
+        // under a key of ours: other mods' StarUI in the same picker does not matter.
+        val theme = filterTheme()
+        fun injectPanel(key: String, height: Float, build: UIPanelAPI.() -> CustomPanelAPI): CustomPanelAPI =
+            innerPanel.inject(key, Size.exact(rowWidth, height)) {
+                Theme(theme) { build().position.inTL(0f, 0f) }
+            }
+
+        val searchBarFilterPanel = injectPanel(SEARCH_KEY, filterRowHeight) {
+            createSearchBarFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
         }
+        val weaponTypesFilterPanel = if (RFSettings.WeaponTypePanelOrder != 0 && filterData is WeaponFilterData)
+            injectPanel("refitfilters:weapon-types", filterRowHeight) {
+                createWeaponTypesFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
+            } else null
+        val damageTypeRangeSliderFilterPanel = if (RFSettings.DamageTypeRangeSliderOrder != 0)
+            injectPanel("refitfilters:damage-range", filterRowHeight) {
+                createDamageTypeRangeSliderFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
+            } else null
+        val sortPanel = if (hasSortRow())
+            injectPanel("refitfilters:sort", SORT_PANEL_HEIGHT) { createSortPanel(rowWidth, pickerPanel, filterData) }
+            else null
 
         val activeFilterPanels = listOfNotNull(
             searchBarFilterPanel to RFSettings.ResetButtonSearchBarPanelOrder,
@@ -167,7 +182,7 @@ object FilterPanelCreator {
             if (weaponSpec.usesAmmo() && !ammoWeapons.value) return true
             if (!weaponSpec.usesAmmo() && !nonAmmoWeapons.value) return true
 
-            if (weaponSpec.maxRange < lowerRange.value && lowerRange.value.toInt() != RFSettings.weaponMinRange) return true
+            if (weaponSpec.maxRange < lowerRange.value) return true
             if (weaponSpec.maxRange > upperRange.value && upperRange.value.toInt() != RFSettings.weaponMaxRange) return true
 
             if (WeaponStats.outside(WeaponStats.dps(weaponSpec), dpsLower.value, dpsUpper.value, StatScale.DPS)) return true
@@ -200,8 +215,11 @@ object FilterPanelCreator {
             if (DamageType.FRAGMENTATION in fighterSpec.variant.fittedWeaponSlots.map { fighterSpec.variant.getWeaponSpec(it).damageType }
                 && !fragDamage.value) return true
 
-            if (fighterSpec.range < lowerRange.value && lowerRange.value.toInt() != RFSettings.fighterMinRange) return true
+            if (fighterSpec.range < lowerRange.value) return true
             if (fighterSpec.range > upperRange.value && upperRange.value.toInt() != RFSettings.fighterMaxRange) return true
+
+            if (WeaponStats.outside(WingStats.refitTime(fighterSpec), refitLower.value, refitUpper.value, StatScale.REFIT)) return true
+            if (WeaponStats.outside(WingStats.size(fighterSpec), sizeLower.value, sizeUpper.value, StatScale.SIZE)) return true
 
             if (RFSettings.searchBarBehaviour != "Sort" && currentSearch.value.isNotEmpty()) {
                 val searchByDesignType = RFSettings.searchByDesignType

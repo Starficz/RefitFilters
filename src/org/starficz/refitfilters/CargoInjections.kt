@@ -1,70 +1,50 @@
 package org.starficz.refitfilters
 
-import com.fs.starfarer.api.campaign.CoreUITabId
 import com.fs.starfarer.api.ui.CutStyle
 import com.fs.starfarer.api.ui.UIComponentAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
 import org.starficz.refitfilters.ReflectionUtils.invoke
 import org.starficz.starui.Anchor
 import org.starficz.starui.components.Button
-import org.starficz.starui.DynamicInjection
+import org.starficz.starui.components.Row
+import org.starficz.starui.inject
 import org.starficz.starui.modifier.anchor
 import org.starficz.starui.modifier.Modifier
 import org.starficz.starui.Size
-import org.starficz.starui.StarUIManager
-import org.starficz.starui.vanilla.children
 
-abstract class BaseCargoInjection : DynamicInjection {
-    // Determine whether to fetch the player's side or the market's side
-    abstract val displayMethodName: String
+/*
+ * Cargo screen filters: work in progress, not active (nothing calls injectCargoFilters yet).
+ *
+ * To switch it on, add a PatchLib @After on the cargo grid's recreate(...) and call injectCargoFilters() on self:
+ * recreate clearChildren()s the grid and builds it again, so the hook lands right after every rebuild (inject
+ * also comes back by itself after a clear, so the grid's first build would do too). The grid's class is
+ * obfuscated (0.98.5a-RC4: com.fs.starfarer.campaign.ui.void): match it by shape, subtype = UIPanelAPI with
+ * methodMatches recreate (6 parameters) and getSpecial (0). Every cargo grid in the game is that class (trade,
+ * storage, cargo pickers): to limit the buttons to the trade screen, check in the hook that self is the trade
+ * panel's getPlayerCargoDisplay() or getEntityCargoDisplay().
+ */
+internal fun UIPanelAPI.injectCargoFilters() {
+    // Find the "Other" button (the last top filter button before the scroll panel)
+    val specialBtn = this.invoke("getSpecial") as? UIComponentAPI ?: return
 
-    override fun findTarget(): UIPanelAPI? {
-        if (StarUIManager.currentCoreUITabID != CoreUITabId.CARGO) return null
-
-        val root = StarUIManager.currentCoreUITabPanel ?: return null
-
-        val tradePanel = root.invoke("getTradePanel") as? UIPanelAPI ?: return null
-
-        val cargoPanel = tradePanel.invoke(displayMethodName) as? UIPanelAPI ?: return null
-
-        if (cargoPanel.children.size <= 4) return null
-
-        return cargoPanel
-    }
-
-    override fun UIPanelAPI.injectUI() {
-        // Find the "Other" button (which is the last top filter button before the scroll panel)
-        val specialBtn = this.invoke("getSpecial") as? UIComponentAPI ?: return
-
-        // Create the first injected button, anchoring it 3 pixels to the right of "Other"
-        val customFilter1 = Button(
-            text = "Filter 1",
-            size = Size.exact(80f, 18f), // Matches vanilla 18f height
-            modifier = Modifier.anchor(Anchor.rightOf.sibling(specialBtn).matchingBottomEdge(1f)),
-            cutStyle = CutStyle.TOP
-        ) {
-            // TODO: Add your filter toggle logic here
-            // e.g. this.invoke("getFilteredCargo") and apply filters
-        }
-
-        // Create the second injected button, anchoring it 3 pixels to the right of the first injected button
-        val customFilter2 = Button(
-            text = "Filter 2",
-            size = Size.exact(80f, 18f),
-            modifier = Modifier.anchor(Anchor.rightOf.sibling(customFilter1).matchingBottomEdge(1f)),
-            cutStyle = CutStyle.TOP
-        ) {
-            // TODO: Add your filter toggle logic here
+    // the injected buttons sit to the right of "Other", bottom edges matched
+    inject("refitfilters:cargo-filters", modifier = Modifier.anchor(Anchor.rightOf.sibling(specialBtn).matchingBottomEdge(1f))) {
+        Row(spacing = 1f) {
+            Button(
+                text = "Filter 1",
+                size = Size.exact(80f, 18f), // Matches vanilla 18f height
+                cutStyle = CutStyle.TOP
+            ) {
+                // TODO: Add your filter toggle logic here
+                // e.g. this.invoke("getFilteredCargo") and apply filters
+            }
+            Button(
+                text = "Filter 2",
+                size = Size.exact(80f, 18f),
+                cutStyle = CutStyle.TOP
+            ) {
+                // TODO: Add your filter toggle logic here
+            }
         }
     }
-}
-
-class PlayerCargoInjection : BaseCargoInjection() {
-    override val id = "RefitFilters_PlayerCargo"
-    override val displayMethodName = "getPlayerCargoDisplay"
-}
-
-class EntityCargoInjection : BaseCargoInjection() {
-    override val id = "RefitFilters_EntityCargo"
-    override val displayMethodName = "getEntityCargoDisplay"
 }

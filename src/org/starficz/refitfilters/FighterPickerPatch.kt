@@ -56,7 +56,7 @@ object FighterPickerPatch {
         if (kept.size != items.size) context.returnValue = kept
     }
 
-    /** Search ranking after vanilla's sort (stable: vanilla's order breaks ties). */
+    /** The sort row's order and the search ranking after vanilla's sort (both stable: the order before them breaks ties). */
     @JvmStatic
     @RedirectMethodCall(
         target = MethodMatch(methodName = "updateUI", parameterCount = 0, methodType = MethodType.METHOD, staticType = StaticType.INSTANCE),
@@ -66,10 +66,13 @@ object FighterPickerPatch {
     fun afterVanillaSort(context: MethodCallContext) {
         context.call()
         context.setResult(null)
-        val search = FilterPanelCreator.fighterFilterData.currentSearch.value
-        if (RFSettings.searchBarBehaviour == "Filter" || search.isBlank()) return
         @Suppress("UNCHECKED_CAST")
         val items = context.getCallArg(0) as? MutableList<Any?> ?: return
+        val data = FilterPanelCreator.fighterFilterData
+        // the sort row's order (none when the row is off: vanilla's stays), then the search ranking on top of it
+        if (RFSettings.sortRowEnabled) WingStats.sort(items, data.sortKey.value, data.sortDescending.value)
+        val search = data.currentSearch.value
+        if (RFSettings.searchBarBehaviour == "Filter" || search.isBlank()) return
         items.sortWith(compareByDescending { item ->
             (item as? AutofitPlugin.AvailableFighter)?.wingSpec?.let { FilterPanelCreator.fighterSearchScore(search, it) } ?: 0
         })
