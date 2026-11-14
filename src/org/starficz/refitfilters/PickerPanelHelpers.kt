@@ -8,7 +8,6 @@ import org.starficz.starui.modifier.Modifier
 import org.starficz.starui.modifier.onAdvance
 import org.starficz.starui.UIState
 import org.starficz.starui.vanilla.centerY
-import org.starficz.starui.vanilla.height
 import org.starficz.starui.vanilla.top
 import org.starficz.starui.vanilla.yAlignOffset
 
