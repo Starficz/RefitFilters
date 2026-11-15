@@ -6,6 +6,7 @@ import com.fs.starfarer.api.ui.UIPanelAPI
 import com.fs.starfarer.api.util.Misc
 import org.lazywizard.lazylib.opengl.ColorUtils.glColor
 import org.lwjgl.opengl.GL11
+import org.starficz.refitfilters.HoverSound.hoverSound
 import org.starficz.refitfilters.PickerPanelHelpers.refreshPickerOn
 import org.starficz.refitfilters.SortKey
 import org.starficz.refitfilters.FilterData
@@ -96,6 +97,7 @@ private fun UIPanelAPI.SortItem(key: SortKey, active: Boolean, descending: Boole
             GL11.glRectf(left, bottom, right, top)
             GL11.glEnable(GL11.GL_TEXTURE_2D)
         }
+        .hoverSound("sort:${key.name}")
         .onClick {
             playSound("ui_button_pressed", 1f, 1f)
             if (filterData.sortKey.value == key) filterData.sortDescending.value = !filterData.sortDescending.value

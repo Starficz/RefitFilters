@@ -128,6 +128,10 @@ class StatSlider(
     val filtered: Boolean get() = lower.value > min || upper.value < max
 }
 
+/** The stat selector's halves, for [HoverSound]. */
+private const val SELECTOR_BACK = "stat-selector:back"
+private const val SELECTOR_NEXT = "stat-selector:next"
+
 /**
  * The stat selector (a selector, not a filter toggle): the sort strip's dark fill in a frame, the stat between two
  * small arrows, the pips in their own band below. Click the right half for the next stat, the left half or right-click
@@ -211,6 +215,9 @@ private fun UIPanelAPI.StatSelector(filterData: FilterData, stats: List<StatSlid
             if (event.isRMBDownEvent) step(-1)
             else if (event.isLMBDownEvent) step(if (event.x < slider.left + slider.width / 2f) -1 else 1)
         }
+        // each half is a button (back, next): the hover sound on coming onto either, as the halves light up
+        .onHover { event -> HoverSound.over(if (event.x < slider.left + slider.width / 2f) SELECTOR_BACK else SELECTOR_NEXT) }
+        .onHoverExit { HoverSound.left(SELECTOR_BACK); HoverSound.left(SELECTOR_NEXT) }
     slider = Box(Size.exact(width, height), look) {
         Text(filterData.sliderStat.value.label, font = Font.VICTOR_14, color = Misc.getBasePlayerColor(),
             modifier = Modifier.align(Alignment.TopCenter).margin(top = 1f))   // its line box puts the glyphs 7 px down, level with the arrows

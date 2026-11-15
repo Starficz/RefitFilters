@@ -6,10 +6,37 @@ import com.fs.starfarer.api.ui.UIPanelAPI
 import org.starficz.refitfilters.ReflectionUtils.invoke
 import org.starficz.starui.modifier.Modifier
 import org.starficz.starui.modifier.onAdvance
+import org.starficz.starui.modifier.onHoverEnter
+import org.starficz.starui.modifier.onHoverExit
 import org.starficz.starui.UIState
 import org.starficz.starui.vanilla.centerY
+import org.starficz.starui.vanilla.playSound
 import org.starficz.starui.vanilla.top
 import org.starficz.starui.vanilla.yAlignOffset
+
+/**
+ * Vanilla's button hover sound for the custom-drawn controls (sort keys, the stat selector's halves). Every click
+ * makes vanilla rebuild the picker with fresh filter panels under the cursor, and the old ones go without a hover
+ * exit, so the hovered control is remembered by [id] across rebuilds: its fresh copy stays silent, another one plays.
+ */
+object HoverSound {
+    private var hovered: String? = null
+
+    /** The cursor is over the control [id] (call on every hover event or on enter): plays when that is new. */
+    fun over(id: String) {
+        if (hovered == id) return
+        hovered = id
+        playSound("ui_button_mouseover")
+    }
+
+    /** The cursor left [id]; another control's enter may already have taken over, so only [id] is forgotten. */
+    fun left(id: String) {
+        if (hovered == id) hovered = null
+    }
+
+    /** On a control that is one button: the sound when the cursor comes onto it. */
+    fun Modifier.hoverSound(id: String): Modifier = onHoverEnter { over(id) }.onHoverExit { left(id) }
+}
 
 object PickerPanelHelpers {
     fun filtersChanged(pickerPanel: UIPanelAPI){
