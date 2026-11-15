@@ -6,15 +6,19 @@ import com.fs.starfarer.api.Global
 import com.fs.starfarer.api.loading.FighterWingSpecAPI
 import com.fs.starfarer.api.loading.WeaponSpecAPI
 import com.fs.starfarer.api.ui.CustomPanelAPI
+import com.fs.starfarer.api.ui.UIComponentAPI
 import com.fs.starfarer.api.ui.UIPanelAPI
 import org.starficz.refitfilters.filterpanels.*
 import org.starficz.refitfilters.ReflectionUtils.getMethodsMatching
+import org.starficz.starui.Anchor
 import org.starficz.starui.AreaCheckboxTheme
 import org.starficz.starui.components.Theme
 import org.starficz.starui.inject
 import org.starficz.starui.injection
 import org.starficz.starui.Size
 import org.starficz.starui.StarUITheme
+import org.starficz.starui.modifier.Modifier
+import org.starficz.starui.modifier.anchor
 import org.starficz.starui.vanilla.*
 
 enum class PickerPanelType {
@@ -25,6 +29,12 @@ enum class PickerPanelType {
 object FilterPanelCreator {
     /** The search bar's injection key; it is always made, so it also says "this picker has its panels". */
     private const val SEARCH_KEY = "refitfilters:search"
+
+    /** The picker's filter rows: ours (each injected under [key]) and vanilla's own filter bar. */
+    private enum class Row(val key: String) {
+        Search(SEARCH_KEY), Vanilla(""), WeaponTypes("refitfilters:weapon-types"),
+        DamageRange("refitfilters:damage-range"), Sort("refitfilters:sort")
+    }
 
     val rowWidth = 377f
     val filterRowHeight = 25f
@@ -96,58 +106,67 @@ object FilterPanelCreator {
         val itemsList = uiElements.getOrNull(existingFiltersIndex+1) ?: return
         val noItems = uiElements.getOrNull(existingFiltersIndex+2)
 
-        // Each panel is its own injection (a container of the panel's exact size, so it can be positioned at once),
-        // under a key of ours: other mods' StarUI in the same picker does not matter.
+        // The rows top to bottom (vanilla's filter bar among ours, by the settings), the sort row last. The search bar
+        // and vanilla's bar are never off (their settings start at 1).
+        val weaponTypes = RFSettings.WeaponTypePanelOrder != 0 && filterData is WeaponFilterData
+        val damageRange = RFSettings.DamageTypeRangeSliderOrder != 0
+        val rows = listOfNotNull(
+            Row.Search to RFSettings.ResetButtonSearchBarPanelOrder,
+            Row.Vanilla to RFSettings.VanillaWeaponAvailabilityWeaponSlotPanelOrder,
+            if (weaponTypes) Row.WeaponTypes to RFSettings.WeaponTypePanelOrder else null,
+            if (damageRange) Row.DamageRange to RFSettings.DamageTypeRangeSliderOrder else null
+        ).sortedBy { (_, order) -> order }.map { (row, _) -> row } + listOfNotNull(if (hasSortRow()) Row.Sort else null)
+
+        // Each of our rows is its own injection (a container of the row's exact size) under a key of ours, anchored
+        // under the row before it: StarUI applies the anchor on every layout, so the rows stay in place. Vanilla's bar
+        // is linked the same way with its own belowLeft, which vanilla also resolves on every layout.
         val theme = filterTheme()
-        fun injectPanel(key: String, height: Float, build: UIPanelAPI.() -> CustomPanelAPI): CustomPanelAPI =
-            innerPanel.inject(key, Size.exact(rowWidth, height)) {
-                Theme(theme) { build().position.inTL(0f, 0f) }
+        var previous: UIComponentAPI? = null
+        for (row in rows) {
+            val pad = when {
+                row == Row.Sort -> SORT_ROW_GAP
+                previous === existingFilters -> 0f
+                else -> 1f
             }
-
-        val searchBarFilterPanel = injectPanel(SEARCH_KEY, filterRowHeight) {
-            createSearchBarFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
-        }
-        val weaponTypesFilterPanel = if (RFSettings.WeaponTypePanelOrder != 0 && filterData is WeaponFilterData)
-            injectPanel("refitfilters:weapon-types", filterRowHeight) {
-                createWeaponTypesFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
-            } else null
-        val damageTypeRangeSliderFilterPanel = if (RFSettings.DamageTypeRangeSliderOrder != 0)
-            injectPanel("refitfilters:damage-range", filterRowHeight) {
-                createDamageTypeRangeSliderFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
-            } else null
-        val sortPanel = if (hasSortRow())
-            injectPanel("refitfilters:sort", SORT_PANEL_HEIGHT) { createSortPanel(rowWidth, pickerPanel, filterData) }
-            else null
-
-        val activeFilterPanels = listOfNotNull(
-            searchBarFilterPanel to RFSettings.ResetButtonSearchBarPanelOrder,
-            existingFilters to RFSettings.VanillaWeaponAvailabilityWeaponSlotPanelOrder,
-            weaponTypesFilterPanel?.let { it to RFSettings.WeaponTypePanelOrder },
-            damageTypeRangeSliderFilterPanel?.let { it to RFSettings.DamageTypeRangeSliderOrder }
-        ).filter { (_, order) -> order != 0 }.sortedBy { (_, order) -> order }.map { (panel, _) -> panel } +
-            listOfNotNull(sortPanel)
-        if (activeFilterPanels.isEmpty()) return
-
-        activeFilterPanels.forEachIndexed { index, filterPanel ->
-            if(index == 0){
-                if (currentlyMountedText != null) {
-                    filterPanel.position.belowLeft(currentlySelected, 5f)
+            val prev = previous
+            if (row == Row.Vanilla) {
+                when {
+                    prev != null -> existingFilters.position.belowLeft(prev, pad)
+                    currentlyMountedText != null -> existingFilters.position.belowLeft(currentlySelected, 5f)
+                    else -> {
+                        existingFilters.yAlignOffset = innerPanel.top - existingFilters.top - 2f
+                        existingFilters.xAlignOffset = 5f
+                    }
                 }
-                else {
-                    filterPanel.yAlignOffset = innerPanel.top - filterPanel.top - 2f
-                    filterPanel.xAlignOffset = 5f
-                }
+                previous = existingFilters
+                continue
             }
-            else{
-                val pad = if (filterPanel === sortPanel) SORT_ROW_GAP
-                          else if (activeFilterPanels[index-1] === existingFilters) 0f else 1f
-                filterPanel.position.belowLeft(activeFilterPanels[index-1], pad)
+            val anchor = when {
+                prev != null -> Anchor.below.sibling(prev).matchingLeftEdge(pad)
+                currentlyMountedText != null && currentlySelected != null ->
+                    Anchor.below.sibling(currentlySelected).matchingLeftEdge(5f)
+                else -> Anchor.inside.topLeft.ofParent(5f, -2f)
+            }
+            val height = if (row == Row.Sort) SORT_PANEL_HEIGHT else filterRowHeight
+            previous = innerPanel.inject(row.key, Size.exact(rowWidth, height), Modifier.anchor(anchor)) {
+                Theme(theme) {
+                    when (row) {
+                        Row.Search -> createSearchBarFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
+                        Row.WeaponTypes -> createWeaponTypesFilterPanel(rowWidth, filterRowHeight, pickerPanel,
+                            filterData as WeaponFilterData)
+                        Row.DamageRange ->
+                            createDamageTypeRangeSliderFilterPanel(rowWidth, filterRowHeight, pickerPanel, filterData)
+                        Row.Sort -> createSortPanel(rowWidth, pickerPanel, filterData)
+                        Row.Vanilla -> error("vanilla's bar is not injected")
+                    }.position.inTL(0f, 0f)
+                }
             }
         }
+        val last = previous ?: return
 
-        val listGap = if (sortPanel != null) SORT_LIST_GAP else 6f
-        itemsList.position.belowLeft(activeFilterPanels.last(), listGap)
-        noItems?.position?.belowLeft(activeFilterPanels.last(), listGap)
+        val listGap = if (rows.last() == Row.Sort) SORT_LIST_GAP else 6f
+        itemsList.position.belowLeft(last, listGap)
+        noItems?.position?.belowLeft(last, listGap)
     }
 
     /** How well a fighter wing matches the search: its best fuzzy score over name, manufacturer and source mod. */

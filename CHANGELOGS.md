@@ -1,5 +1,17 @@
 ## Version 4.0.0
-- 
+- Rebuilt on StarUILib, now requires StarUILib, PatchLib and LazyLib
+- Hooks the weapon and fighter pickers directly instead of checking every frame, so the filters are there the moment the picker opens
+- Added a Sort row under the filters
+  + Weapons by Name, OP, Range, Damage, DPS or Flux Efficiency
+  + Fighters by Name, OP, Range, Refit Time or Wing Size
+  + Click the active one again to reverse it
+- The slider can filter more than range: click its label to switch
+  + Weapons: Range, DPS, Damage per shot, Flux Efficiency
+  + Fighters: Range, Refit Time, Wing Size
+  + Every limit you set applies at once, Reset Filters clears them all
+- New settings: default sort, sort order and slider for weapons and fighters, the slider's max for each stat, and the Sort row on or off
+- Removed the min range setting, the slider starts at 0
+- Updated for 0.98.5a-RC6
 
 ## Version 3.1.3
 - Fixed memory leak

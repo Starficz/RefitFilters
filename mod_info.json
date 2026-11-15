@@ -5,23 +5,27 @@
     "utility": "true",
     "version": "4.0.0",
     "description": "Adds additional filters to the refit weapon picker.",
-    "gameVersion": "0.98.5a-RC4",
+    "gameVersion": "0.98.5a-RC6",
     "jars":["jars/RefitFilters.jar"],
     "modPlugin":"org.starficz.refitfilters.ModPlugin",
     "dependencies": [
         {
+            "id": "lw_lazylib",
+            "name": "LazyLib",
+            "version": { "major": "3", "minor": "1", "patch": "0" }
+        },
+        {
             "id": "lunalib",
             "name": "LunaLib",
-            "version": { "major": "2", "minor": "0", "patch": "0"}
+            "version": { "major": "2", "minor": "1", "patch": "0"}
         },
         {
             "id": "patchlib",
             "name": "! PatchLib !"
         },
         {
-            "id": "staruiframework",
-            "name": "StarUIFramework",
-            "version": { "major": "1", "minor": "0", "patch": "0"}
+            "id": "staruilib",
+            "name": "StarUILib"
         }
     ]
 }

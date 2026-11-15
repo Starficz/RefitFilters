@@ -7,7 +7,7 @@ import org.starficz.refitfilters.PickerPanelHelpers.refreshPickerOn
 import org.starficz.refitfilters.WeaponFilterData
 import org.starficz.starui.Alignment
 import org.starficz.starui.components.AreaCheckbox
-import org.starficz.starui.components.ButtonGroup
+import org.starficz.starui.components.FilterGroup
 import org.starficz.starui.components.Row
 import org.starficz.starui.modifier.Modifier
 import org.starficz.starui.modifier.tooltip
@@ -27,12 +27,12 @@ fun UIPanelAPI.createWeaponTypesFilterPanel(
         Modifier.refreshPickerOn(pickerPanel, projectileWeapons, beamWeapons, pdWeapons, nonpdWeapons, ammoWeapons, nonAmmoWeapons),
         verticalAlignment = Alignment.CenterVertically, spacing = 1f
     ) {
-        val beamGroup = ButtonGroup()
-        val pdGroup = ButtonGroup()
-        val ammoGroup = ButtonGroup()
+        val beamGroup = FilterGroup()
+        val pdGroup = FilterGroup()
+        val ammoGroup = FilterGroup()
         val buttonWidth = 62f
 
-        fun typeButton(text: String, width: Float, state: UIState<Boolean>, group: ButtonGroup, tooltipText: String) {
+        fun typeButton(text: String, width: Float, state: UIState<Boolean>, group: FilterGroup, tooltipText: String) {
             AreaCheckbox(
                 text, state, Size.exact(width, targetHeight),
                 Modifier.tooltip(300f, TooltipMakerAPI.TooltipLocation.ABOVE) { addPara(tooltipText, 0f) },

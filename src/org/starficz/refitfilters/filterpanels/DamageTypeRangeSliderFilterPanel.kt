@@ -49,7 +49,7 @@ fun UIPanelAPI.createDamageTypeRangeSliderFilterPanel(
 
     // Exact size: FilterPanelCreator adds up the panels' heights right after creating them, before the first layout.
     return Row(Size.exact(targetWidth, targetHeight), refresh, verticalAlignment = Alignment.CenterVertically, spacing = 1f) {
-        val damageTypeGroup = ButtonGroup()
+        val damageTypeGroup = FilterGroup()
 
         fun createDamageTypeButton(iconPath: String, typeColor: Color, filterState: UIState<Boolean>, tooltipText: String) {
             // Reads filterState, so this box re-runs when the type is toggled: the checkbox and the icon stacked on
